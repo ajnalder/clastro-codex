@@ -1,0 +1,48 @@
+---
+import JoeEditable from '../../components/JoeEditable.astro';
+import JoePlumbingLayout from '../../layouts/JoePlumbingLayout.astro';
+import { getCollectionString, getJoePage, getPageLink, getPageString, joeServices } from '../../joe-plumbing/content';
+
+const page = getJoePage('servicesPage');
+const editMode = Astro.url.searchParams.get('clastro-edit') === '1';
+const cta = getPageLink(page, 'emergencyCta');
+---
+
+<JoePlumbingLayout
+  title={getPageString(page, 'metaTitle')}
+  metaDescription={getPageString(page, 'metaDescription')}
+  schema={getPageString(page, 'schema')}
+  currentPath="/joe-plumbing/services"
+  editMode={editMode}
+>
+  <main>
+    <section class="joe-page-hero">
+      <div class="joe-section-inner">
+        <p class="joe-kicker">Services</p>
+        <JoeEditable as="h1" id="services.pageHeading" editMode={editMode}>
+          {getPageString(page, 'pageHeading')}
+        </JoeEditable>
+        <JoeEditable as="p" id="services.intro" editMode={editMode}>
+          {getPageString(page, 'intro')}
+        </JoeEditable>
+        <div class="joe-hero-actions">
+          <a class="joe-button" href={cta.href} data-editable-link={editMode ? 'emergencyCta' : undefined}>{cta.label}</a>
+        </div>
+      </div>
+    </section>
+    <section class="joe-band is-white">
+      <div class="joe-section-inner">
+        <div class="joe-service-grid">
+          {joeServices.map((service) => (
+            <article class="joe-service-card">
+              <span class="joe-tag">{service.status}</span>
+              <h3>{getCollectionString(service, 'title')}</h3>
+              <p>{getCollectionString(service, 'summary')}</p>
+            </article>
+          ))}
+        </div>
+      </div>
+    </section>
+  </main>
+</JoePlumbingLayout>
+

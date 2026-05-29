@@ -1,0 +1,44 @@
+---
+import JoeEditable from '../../components/JoeEditable.astro';
+import JoePlumbingLayout from '../../layouts/JoePlumbingLayout.astro';
+import { getCollectionString, getJoePage, getPageString, joeBlogPosts } from '../../joe-plumbing/content';
+
+const page = getJoePage('blogPage');
+const editMode = Astro.url.searchParams.get('clastro-edit') === '1';
+---
+
+<JoePlumbingLayout
+  title={getPageString(page, 'metaTitle')}
+  metaDescription={getPageString(page, 'metaDescription')}
+  schema={getPageString(page, 'schema')}
+  currentPath="/joe-plumbing/blog"
+  editMode={editMode}
+>
+  <main>
+    <section class="joe-page-hero">
+      <div class="joe-section-inner">
+        <p class="joe-kicker">Blog</p>
+        <JoeEditable as="h1" id="blog.pageHeading" editMode={editMode}>
+          {getPageString(page, 'pageHeading')}
+        </JoeEditable>
+        <JoeEditable as="p" id="blog.intro" editMode={editMode}>
+          {getPageString(page, 'intro')}
+        </JoeEditable>
+      </div>
+    </section>
+    <section class="joe-band is-white">
+      <div class="joe-section-inner">
+        <div class="joe-blog-grid">
+          {joeBlogPosts.map((post) => (
+            <article class="joe-blog-card">
+              <span class="joe-tag">{getCollectionString(post, 'publishDate')}</span>
+              <h3>{getCollectionString(post, 'title')}</h3>
+              <p>{getCollectionString(post, 'excerpt')}</p>
+            </article>
+          ))}
+        </div>
+      </div>
+    </section>
+  </main>
+</JoePlumbingLayout>
+

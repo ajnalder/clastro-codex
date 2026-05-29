@@ -1,0 +1,15 @@
+---
+interface Props {
+  as?: keyof HTMLElementTagNameMap;
+  id: string;
+  editMode: boolean;
+  class?: string;
+}
+
+const { as = 'span', id, editMode, class: className } = Astro.props;
+const Element = as;
+---
+
+<Element class:list={['joe-editable', className]} data-editable={id} data-edit-enabled={String(editMode)}>
+  <slot />
+</Element>

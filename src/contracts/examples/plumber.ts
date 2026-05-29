@@ -1,7 +1,7 @@
 import type { ContentContract } from '../content-contract';
 
 export const plumberContract: ContentContract = {
-  siteId: 'plumber-demo',
+  siteId: 'joes-plumbing',
   version: 1,
   collections: [
     {
@@ -39,16 +39,62 @@ export const plumberContract: ContentContract = {
         },
       ],
     },
+    {
+      id: 'blogPosts',
+      label: 'Blog',
+      itemLabel: 'Blog Post',
+      coreFields: [
+        { id: 'title', label: 'Title', primitive: 'shortText', required: true },
+        { id: 'slug', label: 'Slug', primitive: 'shortText', required: true },
+        { id: 'excerpt', label: 'Excerpt', primitive: 'longText', required: true },
+        { id: 'body', label: 'Body', primitive: 'richText', required: true },
+        { id: 'heroImage', label: 'Hero Image', primitive: 'image', required: false },
+        { id: 'publishDate', label: 'Publish Date', primitive: 'date', required: true },
+        { id: 'seo', label: 'SEO Metadata', primitive: 'seoMetadata', required: true },
+      ],
+      extraSectionTypes: [],
+    },
   ],
   pages: [
     {
       id: 'home',
-      path: '/',
+      path: '/joe-plumbing',
       label: 'Home',
       regions: [
+        { id: 'heroEyebrow', label: 'Hero Eyebrow', primitive: 'shortText', required: false },
         { id: 'heroHeading', label: 'Hero Heading', primitive: 'shortText', required: true },
         { id: 'heroIntro', label: 'Hero Intro', primitive: 'richText', required: true },
+        { id: 'primaryCta', label: 'Primary CTA', primitive: 'buttonLink', required: true },
+        { id: 'serviceIntro', label: 'Service Intro', primitive: 'richText', required: true },
+      ],
+    },
+    {
+      id: 'about',
+      path: '/joe-plumbing/about',
+      label: 'About',
+      regions: [
+        { id: 'pageHeading', label: 'Page Heading', primitive: 'shortText', required: true },
+        { id: 'intro', label: 'Intro', primitive: 'richText', required: true },
+        { id: 'proofPoint', label: 'Proof Point', primitive: 'callout', required: true },
+      ],
+    },
+    {
+      id: 'servicesPage',
+      path: '/joe-plumbing/services',
+      label: 'Services',
+      regions: [
+        { id: 'pageHeading', label: 'Page Heading', primitive: 'shortText', required: true },
+        { id: 'intro', label: 'Intro', primitive: 'richText', required: true },
         { id: 'emergencyCta', label: 'Emergency CTA', primitive: 'buttonLink', required: true },
+      ],
+    },
+    {
+      id: 'blogPage',
+      path: '/joe-plumbing/blog',
+      label: 'Blog',
+      regions: [
+        { id: 'pageHeading', label: 'Page Heading', primitive: 'shortText', required: true },
+        { id: 'intro', label: 'Intro', primitive: 'richText', required: true },
       ],
     },
   ],

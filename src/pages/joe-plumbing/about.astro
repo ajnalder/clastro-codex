@@ -1,0 +1,41 @@
+---
+import JoeEditable from '../../components/JoeEditable.astro';
+import JoePlumbingLayout from '../../layouts/JoePlumbingLayout.astro';
+import { getJoePage, getPageString } from '../../joe-plumbing/content';
+
+const page = getJoePage('about');
+const editMode = Astro.url.searchParams.get('clastro-edit') === '1';
+---
+
+<JoePlumbingLayout
+  title={getPageString(page, 'metaTitle')}
+  metaDescription={getPageString(page, 'metaDescription')}
+  schema={getPageString(page, 'schema')}
+  currentPath="/joe-plumbing/about"
+  editMode={editMode}
+>
+  <main>
+    <section class="joe-page-hero">
+      <div class="joe-section-inner">
+        <p class="joe-kicker">About Joe</p>
+        <JoeEditable as="h1" id="about.pageHeading" editMode={editMode}>
+          {getPageString(page, 'pageHeading')}
+        </JoeEditable>
+        <JoeEditable as="p" id="about.intro" editMode={editMode}>
+          {getPageString(page, 'intro')}
+        </JoeEditable>
+      </div>
+    </section>
+    <section class="joe-band is-white">
+      <div class="joe-section-inner joe-split">
+        <p class="joe-copy">
+          The dummy site gives Clastro a practical place to prove static copy, CMS-backed service cards, page settings, and visual editing can all live together without becoming a page builder.
+        </p>
+        <JoeEditable as="aside" id="about.proofPoint" editMode={editMode} class="joe-proof">
+          {getPageString(page, 'proofPoint')}
+        </JoeEditable>
+      </div>
+    </section>
+  </main>
+</JoePlumbingLayout>
+

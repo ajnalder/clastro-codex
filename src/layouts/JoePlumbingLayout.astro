@@ -1,0 +1,71 @@
+---
+import '../styles/joe-plumbing.css';
+
+interface Props {
+  title: string;
+  metaDescription: string;
+  schema?: string;
+  currentPath: string;
+  editMode: boolean;
+}
+
+const { title, metaDescription, schema, currentPath, editMode } = Astro.props;
+const navItems = [
+  { href: '/joe-plumbing', label: 'Home' },
+  { href: '/joe-plumbing/about', label: 'About' },
+  { href: '/joe-plumbing/services', label: 'Services' },
+  { href: '/joe-plumbing/blog', label: 'Blog' },
+];
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <title>{title}</title>
+    <meta name="description" content={metaDescription} />
+    {schema && <script type="application/ld+json" set:html={schema} />}
+  </head>
+  <body class="joe-site">
+    <div class="joe-edit-bar" data-joe-edit-root hidden>
+      <a href="/cms?view=pages&page=home">Back to CMS</a>
+      <span data-joe-edit-status>Published</span>
+      <button type="button" data-joe-publish disabled>Publish</button>
+    </div>
+
+    <div class="joe-edit-toolbar" data-joe-toolbar hidden>
+      <button type="button" data-command="bold">B</button>
+      <button type="button" data-command="italic">I</button>
+      <button type="button" data-command="insertUnorderedList">List</button>
+    </div>
+
+    <header class="joe-header">
+      <a class="joe-brand" href="/joe-plumbing">
+        <span>JP</span>
+        <strong>Joe's Plumbing</strong>
+      </a>
+      <nav aria-label="Joe's Plumbing navigation">
+        {navItems.map((item) => (
+          <a class:list={{ 'is-active': currentPath === item.href }} href={item.href}>{item.label}</a>
+        ))}
+      </nav>
+      <a class="joe-header-cta" href="tel:+6475550184">Call Joe</a>
+    </header>
+
+    <slot />
+
+    <footer class="joe-footer">
+      <div>
+        <strong>Joe's Plumbing</strong>
+        <p>Repairs, maintenance, and practical plumbing advice for Tauranga homes.</p>
+      </div>
+      <a href="/cms?view=pages&page=home">Open CMS</a>
+    </footer>
+
+    <script>
+      import '../joe-plumbing/edit-mode';
+    </script>
+  </body>
+</html>

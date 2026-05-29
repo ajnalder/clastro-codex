@@ -1,0 +1,88 @@
+---
+import JoeEditable from '../components/JoeEditable.astro';
+import JoePlumbingLayout from '../layouts/JoePlumbingLayout.astro';
+import {
+  getCollectionString,
+  getJoePage,
+  getPageLink,
+  getPageString,
+  joeBlogPosts,
+  joeServices,
+} from '../joe-plumbing/content';
+
+const page = getJoePage('home');
+const cta = getPageLink(page, 'primaryCta');
+const editMode = Astro.url.searchParams.get('clastro-edit') === '1';
+const featuredServices = joeServices.slice(0, 3);
+const featuredPost = joeBlogPosts[0];
+---
+
+<JoePlumbingLayout
+  title={getPageString(page, 'metaTitle')}
+  metaDescription={getPageString(page, 'metaDescription')}
+  schema={getPageString(page, 'schema')}
+  currentPath="/joe-plumbing"
+  editMode={editMode}
+>
+  <main>
+    <section class="joe-hero">
+      <div class="joe-section-inner joe-hero-grid">
+        <div>
+          <JoeEditable as="p" id="home.heroEyebrow" editMode={editMode} class="joe-kicker">
+            {getPageString(page, 'heroEyebrow')}
+          </JoeEditable>
+          <JoeEditable as="h1" id="home.heroHeading" editMode={editMode}>
+            {getPageString(page, 'heroHeading')}
+          </JoeEditable>
+          <JoeEditable as="p" id="home.heroIntro" editMode={editMode}>
+            {getPageString(page, 'heroIntro')}
+          </JoeEditable>
+          <div class="joe-hero-actions">
+            <a class="joe-button" href={cta.href} data-editable-link={editMode ? 'primaryCta' : undefined}>{cta.label}</a>
+            <span class="joe-tag">Same-day emergency slots</span>
+          </div>
+        </div>
+        <div class="joe-hero-media">
+          <img src="/joe-plumbing/van.svg" alt="Joe's Plumbing work van beside pipework" width="900" height="620" />
+          <div class="joe-stat-strip" aria-label="Joe's Plumbing proof points">
+            <div><strong>47 min</strong><span>median response</span></div>
+            <div><strong>312</strong><span>jobs this year</span></div>
+            <div><strong>4.8</strong><span>review average</span></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="joe-band is-white">
+      <div class="joe-section-inner">
+        <div class="joe-section-heading">
+          <h2>Services Joe keeps ready.</h2>
+          <JoeEditable as="p" id="home.serviceIntro" editMode={editMode}>
+            {getPageString(page, 'serviceIntro')}
+          </JoeEditable>
+        </div>
+        <div class="joe-service-grid">
+          {featuredServices.map((service) => (
+            <article class="joe-service-card">
+              <span class="joe-tag">{getCollectionString(service, 'slug')}</span>
+              <h3>{getCollectionString(service, 'title')}</h3>
+              <p>{getCollectionString(service, 'summary')}</p>
+            </article>
+          ))}
+        </div>
+      </div>
+    </section>
+
+    <section class="joe-band">
+      <div class="joe-section-inner joe-split">
+        <div>
+          <p class="joe-kicker">Latest advice</p>
+          <h2>{getCollectionString(featuredPost, 'title')}</h2>
+          <p class="joe-copy">{getCollectionString(featuredPost, 'excerpt')}</p>
+        </div>
+        <a class="joe-button" href="/joe-plumbing/blog">Read the blog</a>
+      </div>
+    </section>
+  </main>
+</JoePlumbingLayout>
+

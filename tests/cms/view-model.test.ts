@@ -73,9 +73,18 @@ describe('createCmsViewModel', () => {
       plumberPages,
     );
 
+    expect(model.pageNavigation.map((page) => page.label)).toEqual(['Home', 'About', 'Services', 'Blog']);
+    expect(model.pageNavigation.map((page) => page.path)).toEqual([
+      '/joe-plumbing',
+      '/joe-plumbing/about',
+      '/joe-plumbing/services',
+      '/joe-plumbing/blog',
+    ]);
+    expect(model.navigation.map((item) => item.label)).toEqual(['Services', 'Blog']);
     expect(model.activePage?.fields.map((field) => field.label)).toEqual(['Name', 'Meta Title', 'Meta Description', 'Schema']);
     expect(model.activePage?.fields.find((field) => field.id === 'metaDescription')?.value).toBe(
       'Emergency plumbing and planned repair services across Tauranga.',
     );
+    expect(model.activePage?.editHref).toBe('/joe-plumbing?clastro-edit=1');
   });
 });

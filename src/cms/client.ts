@@ -28,3 +28,5 @@ editorForm?.addEventListener('input', () => {
 publishButton?.addEventListener('click', () => {
   setStatus('Published', 'Published in this editor session. A production publish will trigger an Astro rebuild.', false);
 });
+
+export {};

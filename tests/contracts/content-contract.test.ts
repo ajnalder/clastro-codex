@@ -74,11 +74,16 @@ describe('example contracts', () => {
     expect(procedures?.extraSectionTypes.map((section) => section.id)).toContain('comparisonTable');
   });
 
-  it('ships a plumber contract with service-specific extra sections', () => {
+  it("ships Joe's Plumbing with pages, services, and blog posts", () => {
     const contract = parseContentContract(plumberContract);
+    const pagePaths = contract.pages.map((page) => page.path);
     const services = contract.collections.find((collection) => collection.id === 'services');
+    const blogPosts = contract.collections.find((collection) => collection.id === 'blogPosts');
 
+    expect(contract.siteId).toBe('joes-plumbing');
+    expect(pagePaths).toEqual(['/joe-plumbing', '/joe-plumbing/about', '/joe-plumbing/services', '/joe-plumbing/blog']);
     expect(services?.extraSectionTypes.map((section) => section.id)).toContain('serviceAreaList');
     expect(services?.extraSectionTypes.map((section) => section.id)).toContain('priceGuide');
+    expect(blogPosts?.itemLabel).toBe('Blog Post');
   });
 });
