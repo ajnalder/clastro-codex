@@ -1,4 +1,5 @@
 import type { ContentItem, ContentStore, PageRegionContent, SaveDraftInput, SavePageRegionDraftInput } from './types';
+import { normalizePageRegionFormat } from './page-region-format';
 
 function itemKey(siteId: string, collectionId: string, itemId: string): string {
   return `${siteId}:${collectionId}:${itemId}`;
@@ -65,8 +66,10 @@ export class MemoryContentStore implements ContentStore {
   }
 
   async savePageRegionDraft(input: SavePageRegionDraftInput): Promise<PageRegionContent> {
+    const format = normalizePageRegionFormat(input);
     const region: PageRegionContent = {
       ...input,
+      ...format,
       status: 'draft',
       updatedAt: new Date().toISOString(),
     };

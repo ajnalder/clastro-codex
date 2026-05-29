@@ -7,6 +7,7 @@ import type {
   SaveDraftInput,
   SavePageRegionDraftInput,
 } from './types';
+import { normalizePageRegionFormat } from './page-region-format';
 
 function now(): string {
   return new Date().toISOString();
@@ -34,12 +35,18 @@ function rowToItem(row: Record<string, unknown>): ContentItem {
 }
 
 function rowToPageRegion(row: Record<string, unknown>): PageRegionContent {
+  const format = normalizePageRegionFormat({
+    elementType: row.element_type,
+    size: row.size,
+  });
   return {
     siteId: String(row.site_id),
     pageId: String(row.page_id),
     regionId: String(row.region_id),
     status: row.status === 'published' ? 'published' : 'draft',
     value: String(row.value_html),
+    elementType: format.elementType,
+    size: format.size,
     updatedBy: String(row.updated_by),
     updatedAt: String(row.updated_at),
   };
@@ -125,17 +132,19 @@ export class D1ContentStore implements ContentStore {
 
   async savePageRegionDraft(input: SavePageRegionDraftInput): Promise<PageRegionContent> {
     const updatedAt = now();
+    const format = normalizePageRegionFormat(input);
     await this.db
       .prepare(
         `INSERT OR REPLACE INTO page_region_values
-          (site_id, page_id, region_id, status, value_html, updated_by, updated_at)
-        VALUES (?, ?, ?, 'draft', ?, ?, ?)`,
+          (site_id, page_id, region_id, status, value_html, element_type, size, updated_by, updated_at)
+        VALUES (?, ?, ?, 'draft', ?, ?, ?, ?, ?)`,
       )
-      .bind(input.siteId, input.pageId, input.regionId, input.value, input.updatedBy, updatedAt)
+      .bind(input.siteId, input.pageId, input.regionId, input.value, format.elementType, format.size, input.updatedBy, updatedAt)
       .run();
 
     return {
       ...input,
+      ...format,
       status: 'draft',
       updatedAt,
     };
@@ -157,10 +166,10 @@ export class D1ContentStore implements ContentStore {
       await this.db
         .prepare(
           `INSERT OR REPLACE INTO page_region_values
-            (site_id, page_id, region_id, status, value_html, updated_by, updated_at)
-          VALUES (?, ?, ?, 'published', ?, ?, ?)`,
+            (site_id, page_id, region_id, status, value_html, element_type, size, updated_by, updated_at)
+          VALUES (?, ?, ?, 'published', ?, ?, ?, ?, ?)`,
         )
-        .bind(siteId, pageId, draft.regionId, draft.value, updatedBy, updatedAt)
+        .bind(siteId, pageId, draft.regionId, draft.value, draft.elementType, draft.size, updatedBy, updatedAt)
         .run();
     }
 

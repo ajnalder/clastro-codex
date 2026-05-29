@@ -1,3 +1,5 @@
+import type { PageRegionElementType, PageRegionSize } from './page-region-format';
+
 export type ContentStatus = 'draft' | 'published';
 
 export type JsonObject = Record<string, unknown>;
@@ -23,6 +25,8 @@ export interface PageRegionContent {
   pageId: string;
   regionId: string;
   value: string;
+  elementType: PageRegionElementType;
+  size: PageRegionSize;
   status: ContentStatus;
   updatedBy: string;
   updatedAt: string;
@@ -42,6 +46,8 @@ export interface SavePageRegionDraftInput {
   pageId: string;
   regionId: string;
   value: string;
+  elementType?: PageRegionElementType;
+  size?: PageRegionSize;
   updatedBy: string;
 }
 

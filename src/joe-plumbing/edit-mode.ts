@@ -1,17 +1,28 @@
+import {
+  normalizePageRegionFormat,
+  resolvePageRegionFormatChange,
+  type PageRegionElementType,
+  type PageRegionSize,
+} from '../content-store/page-region-format';
+
 const root = document.querySelector<HTMLElement>('[data-joe-edit-root]');
 const toolbar = document.querySelector<HTMLElement>('[data-joe-toolbar]');
 const status = document.querySelector<HTMLElement>('[data-joe-edit-status]');
 const publishButton = document.querySelector<HTMLButtonElement>('[data-joe-publish]');
-const editableRegions = document.querySelectorAll<HTMLElement>('[data-editable]');
+const elementSelect = toolbar?.querySelector('[data-editor-element]') as HTMLSelectElement | null | undefined;
+const sizeSelect = toolbar?.querySelector('[data-editor-size]') as HTMLSelectElement | null | undefined;
 const editModeEnabled = new URLSearchParams(window.location.search).get('clastro-edit') === '1';
 const siteId = root?.dataset.siteId ?? 'joes-plumbing';
 const pageId = root?.dataset.pageId ?? 'home';
 const saveTimers = new Map<string, number>();
+let activeRegion: HTMLElement | null = null;
 
 interface PageRegionResponse {
   regions: Array<{
     regionId: string;
     value: string;
+    elementType?: PageRegionElementType;
+    size?: PageRegionSize;
     status: 'draft' | 'published';
   }>;
 }
@@ -46,10 +57,9 @@ function positionToolbar(target: HTMLElement): void {
   if (!toolbar) {
     return;
   }
-  const rect = target.getBoundingClientRect();
+  activeRegion = target;
   toolbar.hidden = false;
-  toolbar.style.left = `${Math.max(16, rect.left)}px`;
-  toolbar.style.top = `${Math.max(62, rect.top - 48 + window.scrollY)}px`;
+  updateToolbarState(target);
 }
 
 async function loadDrafts(): Promise<void> {
@@ -79,7 +89,12 @@ function applyRegions(regions: PageRegionResponse['regions']): void {
   for (const region of regions) {
     const target = document.querySelector<HTMLElement>(`[data-editable="${CSS.escape(region.regionId)}"]`);
     if (target) {
-      target.innerHTML = region.value;
+      const format = normalizePageRegionFormat({
+        elementType: region.elementType ?? target.dataset.elementType ?? target.tagName.toLowerCase(),
+        size: region.size ?? target.dataset.editorSize,
+      });
+      const formattedTarget = setRegionFormat(target, format.elementType, format.size, false);
+      formattedTarget.innerHTML = region.value;
     }
   }
 }
@@ -100,6 +115,8 @@ async function saveRegion(region: HTMLElement): Promise<void> {
       pageId,
       regionId,
       value: region.innerHTML,
+      elementType: getRegionElementType(region),
+      size: getRegionSize(region),
       updatedBy: 'owner',
     }),
   });
@@ -147,6 +164,111 @@ async function publishDrafts(): Promise<void> {
   setPublishedState();
 }
 
+function getRegionElementType(region: HTMLElement): PageRegionElementType {
+  return normalizePageRegionFormat({
+    elementType: region.dataset.elementType ?? region.tagName.toLowerCase(),
+    size: region.dataset.editorSize,
+  }).elementType;
+}
+
+function getRegionSize(region: HTMLElement): PageRegionSize {
+  return normalizePageRegionFormat({
+    elementType: region.dataset.elementType ?? region.tagName.toLowerCase(),
+    size: region.dataset.editorSize,
+  }).size;
+}
+
+function updateToolbarState(region: HTMLElement): void {
+  if (elementSelect) {
+    elementSelect.value = getRegionElementType(region);
+  }
+  if (sizeSelect) {
+    sizeSelect.value = getRegionSize(region);
+  }
+}
+
+function bindEditableRegion(region: HTMLElement): void {
+  if (region.dataset.editorBound === 'true') {
+    return;
+  }
+
+  region.dataset.editorBound = 'true';
+  region.contentEditable = 'true';
+  region.spellcheck = true;
+  region.tabIndex = 0;
+  region.dataset.elementType = getRegionElementType(region);
+  region.dataset.editorSize = getRegionSize(region);
+  region.addEventListener('focus', () => positionToolbar(region));
+  region.addEventListener('click', () => positionToolbar(region));
+  region.addEventListener('input', () => scheduleSave(region));
+}
+
+function setRegionFormat(
+  region: HTMLElement,
+  elementType: PageRegionElementType,
+  size: PageRegionSize,
+  shouldSave = true,
+): HTMLElement {
+  let formattedRegion = region;
+  if (region.tagName.toLowerCase() !== elementType) {
+    const replacement = document.createElement(elementType);
+    for (const attribute of Array.from(region.attributes)) {
+      if (attribute.name === 'data-editor-bound') {
+        continue;
+      }
+      replacement.setAttribute(attribute.name, attribute.value);
+    }
+    replacement.innerHTML = region.innerHTML;
+    region.replaceWith(replacement);
+    formattedRegion = replacement;
+  }
+
+  formattedRegion.dataset.elementType = elementType;
+  formattedRegion.dataset.editorSize = size;
+  bindEditableRegion(formattedRegion);
+  activeRegion = formattedRegion;
+  updateToolbarState(formattedRegion);
+
+  if (shouldSave) {
+    formattedRegion.focus();
+    scheduleSave(formattedRegion);
+  }
+
+  return formattedRegion;
+}
+
+function applyToolbarFormat(control: HTMLSelectElement): void {
+  const region = activeRegion ?? (document.activeElement instanceof HTMLElement
+    ? document.activeElement.closest<HTMLElement>('[data-editable]')
+    : null);
+  if (!region) {
+    return;
+  }
+
+  const currentFormat = {
+    elementType: getRegionElementType(region),
+    size: getRegionSize(region),
+  };
+  const format = resolvePageRegionFormatChange(currentFormat, {
+    elementType: control.matches('[data-editor-element]') ? control.value : undefined,
+    size: control.matches('[data-editor-size]') ? control.value : undefined,
+  });
+  setRegionFormat(region, format.elementType, format.size);
+}
+
+function runEditorCommand(command: string): void {
+  if (command === 'createLink') {
+    const href = window.prompt('Paste the link URL');
+    if (!href) {
+      return;
+    }
+    document.execCommand(command, false, href);
+    return;
+  }
+
+  document.execCommand(command);
+}
+
 if (editModeEnabled) {
   document.body.classList.add('is-editing');
   if (root) {
@@ -154,16 +276,20 @@ if (editModeEnabled) {
   }
   void loadDrafts();
 
-  editableRegions.forEach((region) => {
-    region.contentEditable = 'true';
-    region.spellcheck = true;
-    region.tabIndex = 0;
-    region.addEventListener('focus', () => positionToolbar(region));
-    region.addEventListener('input', () => scheduleSave(region));
-  });
+  document.querySelectorAll<HTMLElement>('[data-editable]').forEach(bindEditableRegion);
 
   toolbar?.addEventListener('mousedown', (event) => {
-    event.preventDefault();
+    if ((event.target as HTMLElement).closest('button')) {
+      event.preventDefault();
+    }
+  });
+
+  toolbar?.addEventListener('change', (event) => {
+    const control = (event.target as HTMLElement).closest('[data-editor-element], [data-editor-size]') as HTMLSelectElement | null;
+    if (!control) {
+      return;
+    }
+    applyToolbarFormat(control);
   });
 
   toolbar?.addEventListener('click', (event) => {
@@ -171,10 +297,12 @@ if (editModeEnabled) {
     if (!button) {
       return;
     }
-    document.execCommand(button.dataset.command ?? '');
-    const activeRegion = document.activeElement instanceof HTMLElement ? document.activeElement.closest<HTMLElement>('[data-editable]') : null;
-    if (activeRegion) {
-      scheduleSave(activeRegion);
+    runEditorCommand(button.dataset.command ?? '');
+    const region = activeRegion ?? (document.activeElement instanceof HTMLElement
+      ? document.activeElement.closest<HTMLElement>('[data-editable]')
+      : null);
+    if (region) {
+      scheduleSave(region);
     } else {
       setDraftState();
     }

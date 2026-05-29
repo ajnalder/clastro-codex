@@ -64,6 +64,8 @@ describe('handleApiRequest', () => {
           pageId: 'home',
           regionId: 'home.heroHeading',
           value: 'Draft homepage heading',
+          elementType: 'h1',
+          size: 'small',
           updatedBy: 'owner',
         }),
       }),
@@ -78,6 +80,8 @@ describe('handleApiRequest', () => {
     await expect(saveResponse.json()).resolves.toMatchObject({
       regionId: 'home.heroHeading',
       value: 'Draft homepage heading',
+      elementType: 'h1',
+      size: 'small',
       status: 'draft',
     });
     await expect(listResponse.json()).resolves.toMatchObject({
@@ -85,6 +89,8 @@ describe('handleApiRequest', () => {
         {
           regionId: 'home.heroHeading',
           value: 'Draft homepage heading',
+          elementType: 'h1',
+          size: 'small',
           status: 'draft',
         },
       ],
@@ -98,6 +104,8 @@ describe('handleApiRequest', () => {
       pageId: 'home',
       regionId: 'home.heroHeading',
       value: 'Published homepage heading',
+      elementType: 'h1',
+      size: 'small',
       updatedBy: 'owner',
     });
 
@@ -119,6 +127,8 @@ describe('handleApiRequest', () => {
         {
           regionId: 'home.heroHeading',
           value: 'Published homepage heading',
+          elementType: 'h1',
+          size: 'small',
           status: 'published',
         },
       ],
@@ -133,6 +143,8 @@ describe('handleApiRequest', () => {
         {
           regionId: 'home.heroHeading',
           value: 'Published homepage heading',
+          elementType: 'h1',
+          size: 'small',
           status: 'published',
         },
       ],

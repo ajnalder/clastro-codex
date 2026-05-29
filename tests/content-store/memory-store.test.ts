@@ -51,6 +51,8 @@ describe('MemoryContentStore', () => {
       pageId: 'home',
       regionId: 'home.heroHeading',
       value: 'Draft headline',
+      elementType: 'h1',
+      size: 'small',
       updatedBy: 'owner',
     });
 
@@ -60,6 +62,8 @@ describe('MemoryContentStore', () => {
         pageId: 'home',
         regionId: 'home.heroHeading',
         value: 'Draft headline',
+        elementType: 'h1',
+        size: 'small',
         status: 'draft',
       },
     ]);
@@ -73,6 +77,8 @@ describe('MemoryContentStore', () => {
       pageId: 'home',
       regionId: 'home.heroHeading',
       value: 'Published headline',
+      elementType: 'h1',
+      size: 'small',
       updatedBy: 'owner',
     });
     await store.savePageRegionDraft({
@@ -80,6 +86,8 @@ describe('MemoryContentStore', () => {
       pageId: 'home',
       regionId: 'home.heroIntro',
       value: 'Published intro',
+      elementType: 'p',
+      size: 'default',
       updatedBy: 'owner',
     });
 
@@ -88,8 +96,20 @@ describe('MemoryContentStore', () => {
     expect(published).toHaveLength(2);
     expect(await store.listPublishedPageRegions('joes-plumbing', 'home')).toEqual(
       expect.arrayContaining([
-        expect.objectContaining({ regionId: 'home.heroHeading', value: 'Published headline', status: 'published' }),
-        expect.objectContaining({ regionId: 'home.heroIntro', value: 'Published intro', status: 'published' }),
+        expect.objectContaining({
+          regionId: 'home.heroHeading',
+          value: 'Published headline',
+          elementType: 'h1',
+          size: 'small',
+          status: 'published',
+        }),
+        expect.objectContaining({
+          regionId: 'home.heroIntro',
+          value: 'Published intro',
+          elementType: 'p',
+          size: 'default',
+          status: 'published',
+        }),
       ]),
     );
     expect(await store.listPageRegionDrafts('joes-plumbing', 'home')).toEqual([]);

@@ -28,7 +28,7 @@ class FakeD1Statement {
     }
 
     if (this.sql.includes('INSERT OR REPLACE INTO page_region_values')) {
-      const [siteId, pageId, regionId, valueHtml, updatedBy, updatedAt] = this.bindings;
+      const [siteId, pageId, regionId, valueHtml, elementType, size, updatedBy, updatedAt] = this.bindings;
       const status = this.sql.includes("'published'") ? 'published' : 'draft';
       this.rows.set(`page:${siteId}:${pageId}:${regionId}:${status}`, {
         site_id: siteId,
@@ -36,6 +36,8 @@ class FakeD1Statement {
         region_id: regionId,
         status,
         value_html: valueHtml,
+        element_type: elementType,
+        size,
         updated_by: updatedBy,
         updated_at: updatedAt,
       });
@@ -123,6 +125,8 @@ describe('D1ContentStore', () => {
       pageId: 'home',
       regionId: 'home.heroHeading',
       value: 'Draft heading',
+      elementType: 'h1',
+      size: 'small',
       updatedBy: 'owner',
     });
 
@@ -131,6 +135,8 @@ describe('D1ContentStore', () => {
       {
         regionId: 'home.heroHeading',
         value: 'Draft heading',
+        elementType: 'h1',
+        size: 'small',
         status: 'draft',
       },
     ]);
@@ -141,6 +147,8 @@ describe('D1ContentStore', () => {
       {
         regionId: 'home.heroHeading',
         value: 'Draft heading',
+        elementType: 'h1',
+        size: 'small',
         status: 'published',
       },
     ]);
