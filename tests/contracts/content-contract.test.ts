@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { parseContentContract } from '../../src/contracts';
+import { parseContentContract, plasticSurgeonContract, plumberContract } from '../../src/contracts';
 
 describe('parseContentContract', () => {
   it('accepts collections with core fields and per-item extra section definitions', () => {
@@ -62,5 +62,23 @@ describe('parseContentContract', () => {
         pages: [],
       }),
     ).toThrow('Duplicate field id "title" in collection "products"');
+  });
+});
+
+describe('example contracts', () => {
+  it('ships a plastic surgeon contract with procedure-specific extra sections', () => {
+    const contract = parseContentContract(plasticSurgeonContract);
+    const procedures = contract.collections.find((collection) => collection.id === 'procedures');
+
+    expect(procedures?.extraSectionTypes.map((section) => section.id)).toContain('recoveryTimeline');
+    expect(procedures?.extraSectionTypes.map((section) => section.id)).toContain('comparisonTable');
+  });
+
+  it('ships a plumber contract with service-specific extra sections', () => {
+    const contract = parseContentContract(plumberContract);
+    const services = contract.collections.find((collection) => collection.id === 'services');
+
+    expect(services?.extraSectionTypes.map((section) => section.id)).toContain('serviceAreaList');
+    expect(services?.extraSectionTypes.map((section) => section.id)).toContain('priceGuide');
   });
 });
