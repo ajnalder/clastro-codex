@@ -211,6 +211,13 @@ textarea {
   border-bottom: 1px solid var(--cms-line);
 }
 
+.cms-editor-actions {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 10px;
+}
+
 .cms-status-pill {
   flex: 0 0 auto;
   padding: 6px 10px;
@@ -348,6 +355,8 @@ textarea {
 }
 
 .cms-button {
+  display: inline-grid;
+  place-items: center;
   width: 100%;
   min-height: 42px;
   margin-top: 16px;
@@ -357,11 +366,32 @@ textarea {
   color: #fbfdf9;
   cursor: pointer;
   font-weight: 800;
+  text-align: center;
+  text-decoration: none;
   transition: background 180ms ease, transform 180ms ease, opacity 180ms ease;
+}
+
+.cms-editor-actions .cms-button {
+  width: auto;
+  min-height: 34px;
+  margin-top: 0;
+  padding: 0 12px;
+  font-size: 0.82rem;
+}
+
+.cms-button-secondary {
+  border-color: var(--cms-line-strong);
+  background: var(--cms-panel);
+  color: var(--cms-accent-dark);
 }
 
 .cms-button:hover:not(:disabled) {
   background: var(--cms-accent-dark);
+}
+
+.cms-button-secondary:hover:not(:disabled) {
+  border-color: var(--cms-accent-dark);
+  background: var(--cms-panel-soft);
 }
 
 .cms-button:active:not(:disabled) {
@@ -442,6 +472,7 @@ textarea {
   }
 
   .cms-editor-header,
+  .cms-editor-actions,
   .cms-subheading,
   .cms-extra-title {
     display: grid;

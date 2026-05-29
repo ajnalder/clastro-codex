@@ -22,6 +22,10 @@ export const plasticSurgeonPages: CmsSamplePage[] = [
     label: 'Home',
     status: 'published',
     values: {
+      name: 'Home',
+      metaTitle: 'Plastic Surgeon Tauranga | Procedures and Consultations',
+      metaDescription: 'Plastic and reconstructive surgery consultations with clear planning and careful aftercare.',
+      schema: '{"@context":"https://schema.org","@type":"MedicalBusiness","name":"Clastro Plastic Surgery Demo"}',
       heroEyebrow: 'Plastic and reconstructive surgery',
       heroHeading: 'Clear, considered care for every stage',
       heroIntro: 'Consultation-led procedures with calm explanations, honest planning, and careful aftercare.',
@@ -140,6 +144,10 @@ export const plumberPages: CmsSamplePage[] = [
     label: 'Home',
     status: 'draft',
     values: {
+      name: 'Home',
+      metaTitle: 'Emergency Plumber Tauranga | Fast Repairs',
+      metaDescription: 'Emergency plumbing and planned repair services across Tauranga.',
+      schema: '{"@context":"https://schema.org","@type":"Plumber","areaServed":"Tauranga"}',
       heroHeading: 'Plumbing help that arrives prepared',
       heroIntro: 'Urgent repairs, planned upgrades, and clear pricing for homes across Tauranga.',
       emergencyCta: {

@@ -84,7 +84,7 @@ function isMultiline(field: CmsFieldView) {
             <div class="cms-section-heading">
               <p class="cms-kicker">Static pages</p>
               <h1>Pages</h1>
-              <p>Editable authored regions for fixed site pages.</p>
+              <p>Page names, SEO metadata, schema, and access to visual editing.</p>
             </div>
 
             <div class="cms-item-list">
@@ -125,19 +125,22 @@ function isMultiline(field: CmsFieldView) {
       <section class="cms-editor" aria-label={isPagesMode ? 'Page editor' : 'Item editor'}>
         <header class="cms-editor-header">
           <div>
-            <p class="cms-kicker">{isPagesMode ? 'Editing page' : 'Editing globally'}</p>
+            <p class="cms-kicker">{isPagesMode ? 'Page settings' : 'Editing globally'}</p>
             <h2>{isPagesMode ? activePage?.label ?? 'Select a page' : activeItem?.label ?? 'Select an item'}</h2>
             <p>{isPagesMode ? activePage?.path : `${activeCollection?.label} / ${activeItem?.id}`}</p>
           </div>
-          <div class="cms-status-pill" data-status-pill>{statusLabel}</div>
+          <div class="cms-editor-actions">
+            {isPagesMode && activePage && <a class="cms-button cms-button-secondary" href={activePage.editHref}>Edit page</a>}
+            <div class="cms-status-pill" data-status-pill>{statusLabel}</div>
+          </div>
         </header>
 
         {isPagesMode && activePage && (
           <form class="cms-form" data-editor-form>
             <section class="cms-field-section" aria-labelledby="page-fields-heading">
               <div class="cms-subheading">
-                <p class="cms-kicker">Page contract</p>
-                <h3 id="page-fields-heading">Editable regions</h3>
+                <p class="cms-kicker">Page settings</p>
+                <h3 id="page-fields-heading">SEO and schema</h3>
               </div>
 
               <div class="cms-fields">
@@ -283,10 +286,18 @@ function isMultiline(field: CmsFieldView) {
           <p class="cms-kicker">Source of truth</p>
           <p>
             {isPagesMode
-              ? 'These fields belong to this static page. Collection-backed content still edits its source item globally.'
+              ? 'On-page copy is edited visually from the page itself. This screen only stores page settings and SEO.'
               : 'Editing this item changes the collection source globally. Pages that pull this content should use the updated source on publish.'}
           </p>
         </section>
+
+        {isPagesMode && activePage && (
+          <section class="cms-rail-section">
+            <p class="cms-kicker">Visual editing</p>
+            <p>Open the page to edit headings, paragraphs, buttons, images, and other visible static content in context.</p>
+            <a class="cms-button cms-button-secondary" href={activePage.editHref}>Edit page</a>
+          </section>
+        )}
 
         <section class="cms-rail-section">
           <p class="cms-kicker">Content contract</p>
@@ -302,7 +313,7 @@ function isMultiline(field: CmsFieldView) {
                   <dd>{activePage?.path}</dd>
                 </div>
                 <div>
-                  <dt>Regions</dt>
+                  <dt>Settings</dt>
                   <dd>{activePage?.fields.length ?? 0}</dd>
                 </div>
               </>

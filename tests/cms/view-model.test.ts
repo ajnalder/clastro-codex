@@ -40,7 +40,7 @@ describe('createCmsViewModel', () => {
     ]);
   });
 
-  it('creates a static page editor view from contract page regions', () => {
+  it('creates a static page settings view without exposing WYSIWYG page regions', () => {
     const model = createCmsViewModel(
       plasticSurgeonContract,
       plasticSurgeonItems,
@@ -52,13 +52,17 @@ describe('createCmsViewModel', () => {
     expect(model.pageNavigation.map((page) => page.label)).toEqual(['Home']);
     expect(model.navigation.some((item) => item.active)).toBe(false);
     expect(model.activePage?.label).toBe('Home');
+    expect(model.activePage?.editHref).toBe('/?clastro-edit=1');
     expect(model.activePage?.fields.map((field) => field.id)).toEqual([
-      'heroEyebrow',
-      'heroHeading',
-      'heroIntro',
-      'heroCta',
+      'name',
+      'metaTitle',
+      'metaDescription',
+      'schema',
     ]);
-    expect(model.activePage?.fields.find((field) => field.id === 'heroCta')?.value).toBe('Book a consultation -> /contact');
+    expect(model.activePage?.fields.find((field) => field.id === 'name')?.value).toBe('Home');
+    expect(model.activePage?.fields.find((field) => field.id === 'metaTitle')?.value).toBe(
+      'Plastic Surgeon Tauranga | Procedures and Consultations',
+    );
   });
 
   it('supports static pages for a different client contract', () => {
@@ -69,13 +73,9 @@ describe('createCmsViewModel', () => {
       plumberPages,
     );
 
-    expect(model.activePage?.fields.map((field) => field.label)).toEqual([
-      'Hero Heading',
-      'Hero Intro',
-      'Emergency CTA',
-    ]);
-    expect(model.activePage?.fields.find((field) => field.id === 'emergencyCta')?.value).toBe(
-      'Call for urgent plumbing -> tel:+6475550184',
+    expect(model.activePage?.fields.map((field) => field.label)).toEqual(['Name', 'Meta Title', 'Meta Description', 'Schema']);
+    expect(model.activePage?.fields.find((field) => field.id === 'metaDescription')?.value).toBe(
+      'Emergency plumbing and planned repair services across Tauranga.',
     );
   });
 });

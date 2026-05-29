@@ -53,6 +53,7 @@ export interface CmsPageView {
   id: string;
   label: string;
   path: string;
+  editHref: string;
   status: CmsSamplePage['status'];
   fields: CmsFieldView[];
 }
@@ -71,6 +72,18 @@ interface Selection {
   selectedCollectionId?: string;
   selectedItemId?: string;
   selectedPageId?: string;
+}
+
+const pageSettingsFields: FieldDefinition[] = [
+  { id: 'name', label: 'Name', primitive: 'shortText', required: true },
+  { id: 'metaTitle', label: 'Meta Title', primitive: 'shortText', required: true },
+  { id: 'metaDescription', label: 'Meta Description', primitive: 'longText', required: true },
+  { id: 'schema', label: 'Schema', primitive: 'longText', required: false },
+];
+
+function createEditHref(path: string): string {
+  const separator = path.includes('?') ? '&' : '?';
+  return `${path}${separator}clastro-edit=1`;
 }
 
 function stringifyValue(value: unknown, field?: FieldDefinition): string {
@@ -98,6 +111,17 @@ function createFieldViews(fields: FieldDefinition[], values: Record<string, unkn
     required: field.required,
     value: stringifyValue(values[field.id], field),
   }));
+}
+
+function createPageView(pageDefinition: NonNullable<ContentContract['pages'][number]>, page: CmsSamplePage): CmsPageView {
+  return {
+    id: page.pageId,
+    label: page.label,
+    path: pageDefinition.path,
+    editHref: createEditHref(pageDefinition.path),
+    status: page.status,
+    fields: createFieldViews(pageSettingsFields, page.values),
+  };
 }
 
 export function createCmsViewModel(
@@ -139,15 +163,7 @@ export function createCmsViewModel(
       pageNavigation,
       activeCollection: null,
       activeItem: null,
-      activePage: selectedPage
-        ? {
-            id: selectedPage.pageId,
-            label: selectedPage.label,
-            path: activePageDefinition?.path ?? '',
-            status: selectedPage.status,
-            fields: createFieldViews(activePageDefinition?.regions ?? [], selectedPage.values),
-          }
-        : null,
+      activePage: activePageDefinition && selectedPage ? createPageView(activePageDefinition, selectedPage) : null,
     };
   }
 
@@ -194,13 +210,7 @@ export function createCmsViewModel(
   };
   const activePage: CmsPageView | null =
     activePageDefinition && selectedPage
-      ? {
-          id: selectedPage.pageId,
-          label: selectedPage.label,
-          path: activePageDefinition.path,
-          status: selectedPage.status,
-          fields: createFieldViews(activePageDefinition.regions, selectedPage.values),
-        }
+      ? createPageView(activePageDefinition, selectedPage)
       : null;
 
   return {
