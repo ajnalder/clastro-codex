@@ -1,0 +1,22 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "clastro-codex",
+  "main": "src/worker/index.ts",
+  "compatibility_date": "2026-05-29",
+  "assets": {
+    "directory": "./dist"
+  },
+  "d1_databases": [
+    {
+      "binding": "CLASTRO_DB",
+      "database_name": "clastro-codex",
+      "database_id": "00000000-0000-0000-0000-000000000000"
+    }
+  ],
+  "r2_buckets": [
+    {
+      "binding": "CLASTRO_MEDIA",
+      "bucket_name": "clastro-codex-media"
+    }
+  ]
+}
