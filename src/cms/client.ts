@@ -22,7 +22,7 @@ function setStatus(label: string, helper: string, dirty: boolean): void {
 }
 
 editorForm?.addEventListener('input', () => {
-  setStatus('Draft changes', 'Autosaved locally. Publish when this source item should go live.', true);
+  setStatus('Draft changes', 'Autosaved locally. Publish when this content should go live.', true);
 });
 
 publishButton?.addEventListener('click', () => {

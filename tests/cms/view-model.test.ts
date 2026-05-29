@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { plasticSurgeonContract, plumberContract } from '../../src/contracts';
-import { plasticSurgeonItems, plumberItems } from '../../src/cms/sample-content';
+import { plasticSurgeonItems, plasticSurgeonPages, plumberItems, plumberPages } from '../../src/cms/sample-content';
 import { createCmsViewModel } from '../../src/cms/view-model';
 
 describe('createCmsViewModel', () => {
@@ -38,5 +38,44 @@ describe('createCmsViewModel', () => {
       'Price Guide',
       'Urgency Callout',
     ]);
+  });
+
+  it('creates a static page editor view from contract page regions', () => {
+    const model = createCmsViewModel(
+      plasticSurgeonContract,
+      plasticSurgeonItems,
+      { mode: 'pages', selectedPageId: 'home' },
+      plasticSurgeonPages,
+    );
+
+    expect(model.activeMode).toBe('pages');
+    expect(model.pageNavigation.map((page) => page.label)).toEqual(['Home']);
+    expect(model.navigation.some((item) => item.active)).toBe(false);
+    expect(model.activePage?.label).toBe('Home');
+    expect(model.activePage?.fields.map((field) => field.id)).toEqual([
+      'heroEyebrow',
+      'heroHeading',
+      'heroIntro',
+      'heroCta',
+    ]);
+    expect(model.activePage?.fields.find((field) => field.id === 'heroCta')?.value).toBe('Book a consultation -> /contact');
+  });
+
+  it('supports static pages for a different client contract', () => {
+    const model = createCmsViewModel(
+      plumberContract,
+      plumberItems,
+      { mode: 'pages', selectedPageId: 'home' },
+      plumberPages,
+    );
+
+    expect(model.activePage?.fields.map((field) => field.label)).toEqual([
+      'Hero Heading',
+      'Hero Intro',
+      'Emergency CTA',
+    ]);
+    expect(model.activePage?.fields.find((field) => field.id === 'emergencyCta')?.value).toBe(
+      'Call for urgent plumbing -> tel:+6475550184',
+    );
   });
 });

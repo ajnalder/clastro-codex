@@ -1,21 +1,30 @@
 ---
 import { plasticSurgeonContract } from '../contracts';
-import { plasticSurgeonItems } from '../cms/sample-content';
+import { plasticSurgeonItems, plasticSurgeonPages } from '../cms/sample-content';
 import { createCmsViewModel, type CmsFieldView } from '../cms/view-model';
 import '../styles/cms.css';
 
 export const prerender = false;
 
+const selectedView = Astro.url.searchParams.get('view');
 const selectedCollectionId = Astro.url.searchParams.get('collection') ?? undefined;
 const selectedItemId = Astro.url.searchParams.get('item') ?? undefined;
+const selectedPageId = Astro.url.searchParams.get('page') ?? undefined;
+const mode = selectedView === 'pages' || selectedPageId ? 'pages' : 'collections';
 
 const model = createCmsViewModel(plasticSurgeonContract, plasticSurgeonItems, {
+  mode,
   selectedCollectionId,
   selectedItemId,
-});
+  selectedPageId,
+}, plasticSurgeonPages);
 
 const activeCollection = model.activeCollection;
 const activeItem = model.activeItem;
+const activePage = model.activePage;
+const isPagesMode = model.activeMode === 'pages';
+const activeStatus = isPagesMode ? activePage?.status : activeItem?.status;
+const statusLabel = activeStatus === 'published' ? 'Published' : 'Saved draft';
 
 const multilinePrimitives = new Set(['richText', 'longText', 'seoMetadata', 'table', 'faqList', 'callout']);
 
@@ -33,7 +42,7 @@ function isMultiline(field: CmsFieldView) {
     <title>Clastro CMS</title>
   </head>
   <body>
-    <main class="cms-shell" data-cms-root>
+    <main class="cms-shell" data-cms-root data-editor-mode={model.activeMode}>
       <aside class="cms-sidebar" aria-label="CMS navigation">
         <a class="cms-brand" href="/">
           <span class="cms-brand-mark">C</span>
@@ -42,6 +51,16 @@ function isMultiline(field: CmsFieldView) {
             <small>Structured editor</small>
           </span>
         </a>
+
+        <nav class="cms-nav" aria-label="Pages">
+          <p class="cms-kicker">Pages</p>
+          {model.pageNavigation.map((page) => (
+            <a class:list={['cms-nav-item', { 'is-active': page.active }]} href={`/cms?view=pages&page=${page.id}`}>
+              <span>{page.label}</span>
+              <small>{page.path}</small>
+            </a>
+          ))}
+        </nav>
 
         <nav class="cms-nav" aria-label="Collections">
           <p class="cms-kicker">Collections</p>
@@ -59,37 +78,102 @@ function isMultiline(field: CmsFieldView) {
         </div>
       </aside>
 
-      <section class="cms-list" aria-label="Collection items">
-        <div class="cms-section-heading">
-          <p class="cms-kicker">Active collection</p>
-          <h1>{activeCollection?.label ?? 'Collection'}</h1>
-          <p>{activeCollection?.itemLabel ?? 'Item'} records generated from the content contract.</p>
-        </div>
+      <section class="cms-list" aria-label={isPagesMode ? 'Pages' : 'Collection items'}>
+        {isPagesMode ? (
+          <>
+            <div class="cms-section-heading">
+              <p class="cms-kicker">Static pages</p>
+              <h1>Pages</h1>
+              <p>Editable authored regions for fixed site pages.</p>
+            </div>
 
-        <div class="cms-item-list">
-          {activeCollection?.items.map((item) => (
-            <a class:list={['cms-item-row', { 'is-active': item.active }]} href={`/cms?collection=${activeCollection.id}&item=${item.id}`}>
-              <span>
-                <strong>{item.label}</strong>
-                <small>{item.id}</small>
-              </span>
-              <em>{item.status}</em>
-            </a>
-          ))}
-        </div>
+            <div class="cms-item-list">
+              {model.pageNavigation.map((page) => (
+                <a class:list={['cms-item-row', { 'is-active': page.active }]} href={`/cms?view=pages&page=${page.id}`}>
+                  <span>
+                    <strong>{page.label}</strong>
+                    <small>{page.path}</small>
+                  </span>
+                  <em>{page.active && activePage ? activePage.status : 'page'}</em>
+                </a>
+              ))}
+            </div>
+          </>
+        ) : (
+          <>
+            <div class="cms-section-heading">
+              <p class="cms-kicker">Active collection</p>
+              <h1>{activeCollection?.label ?? 'Collection'}</h1>
+              <p>{activeCollection?.itemLabel ?? 'Item'} records generated from the content contract.</p>
+            </div>
+
+            <div class="cms-item-list">
+              {activeCollection?.items.map((item) => (
+                <a class:list={['cms-item-row', { 'is-active': item.active }]} href={`/cms?collection=${activeCollection.id}&item=${item.id}`}>
+                  <span>
+                    <strong>{item.label}</strong>
+                    <small>{item.id}</small>
+                  </span>
+                  <em>{item.status}</em>
+                </a>
+              ))}
+            </div>
+          </>
+        )}
       </section>
 
-      <section class="cms-editor" aria-label="Item editor">
+      <section class="cms-editor" aria-label={isPagesMode ? 'Page editor' : 'Item editor'}>
         <header class="cms-editor-header">
           <div>
-            <p class="cms-kicker">Editing globally</p>
-            <h2>{activeItem?.label ?? 'Select an item'}</h2>
-            <p>{activeCollection?.label} / {activeItem?.id}</p>
+            <p class="cms-kicker">{isPagesMode ? 'Editing page' : 'Editing globally'}</p>
+            <h2>{isPagesMode ? activePage?.label ?? 'Select a page' : activeItem?.label ?? 'Select an item'}</h2>
+            <p>{isPagesMode ? activePage?.path : `${activeCollection?.label} / ${activeItem?.id}`}</p>
           </div>
-          <div class="cms-status-pill" data-status-pill>{activeItem?.status === 'published' ? 'Published' : 'Saved draft'}</div>
+          <div class="cms-status-pill" data-status-pill>{statusLabel}</div>
         </header>
 
-        {activeItem && (
+        {isPagesMode && activePage && (
+          <form class="cms-form" data-editor-form>
+            <section class="cms-field-section" aria-labelledby="page-fields-heading">
+              <div class="cms-subheading">
+                <p class="cms-kicker">Page contract</p>
+                <h3 id="page-fields-heading">Editable regions</h3>
+              </div>
+
+              <div class="cms-fields">
+                {activePage.fields.map((field) => (
+                  <label class="cms-field" for={`page-${field.id}`}>
+                    <span>
+                      {field.label}
+                      {field.required && <em>Required</em>}
+                    </span>
+                    {isMultiline(field) ? (
+                      <textarea
+                        class="cms-input cms-textarea"
+                        id={`page-${field.id}`}
+                        name={`page-${field.id}`}
+                        aria-label={field.label}
+                        data-page-field={field.id}
+                      >{field.value}</textarea>
+                    ) : (
+                      <input
+                        class="cms-input"
+                        id={`page-${field.id}`}
+                        name={`page-${field.id}`}
+                        aria-label={field.label}
+                        value={field.value}
+                        data-page-field={field.id}
+                      />
+                    )}
+                    <small>{field.primitive}</small>
+                  </label>
+                ))}
+              </div>
+            </section>
+          </form>
+        )}
+
+        {!isPagesMode && activeItem && (
           <form class="cms-form" data-editor-form>
             <section class="cms-field-section" aria-labelledby="core-fields-heading">
               <div class="cms-subheading">
@@ -190,31 +274,54 @@ function isMultiline(field: CmsFieldView) {
       <aside class="cms-rail" aria-label="Publishing state">
         <section class="cms-rail-section">
           <p class="cms-kicker">Draft state</p>
-          <h2 data-status-text>{activeItem?.status === 'published' ? 'Published' : 'Saved draft'}</h2>
+          <h2 data-status-text>{statusLabel}</h2>
           <p data-status-helper>Autosave protects edits. Publish is the moment content becomes live.</p>
           <button class="cms-button" type="button" data-publish-button disabled>Publish</button>
         </section>
 
         <section class="cms-rail-section">
           <p class="cms-kicker">Source of truth</p>
-          <p>Editing this item changes the collection source globally. Pages that pull this content should use the updated source on publish.</p>
+          <p>
+            {isPagesMode
+              ? 'These fields belong to this static page. Collection-backed content still edits its source item globally.'
+              : 'Editing this item changes the collection source globally. Pages that pull this content should use the updated source on publish.'}
+          </p>
         </section>
 
         <section class="cms-rail-section">
           <p class="cms-kicker">Content contract</p>
           <dl class="cms-contract-list">
-            <div>
-              <dt>Collection</dt>
-              <dd>{activeCollection?.id}</dd>
-            </div>
-            <div>
-              <dt>Core fields</dt>
-              <dd>{activeItem?.fields.length ?? 0}</dd>
-            </div>
-            <div>
-              <dt>Extra sections</dt>
-              <dd>{activeItem?.extraSections.length ?? 0}</dd>
-            </div>
+            {isPagesMode ? (
+              <>
+                <div>
+                  <dt>Page</dt>
+                  <dd>{activePage?.id}</dd>
+                </div>
+                <div>
+                  <dt>Path</dt>
+                  <dd>{activePage?.path}</dd>
+                </div>
+                <div>
+                  <dt>Regions</dt>
+                  <dd>{activePage?.fields.length ?? 0}</dd>
+                </div>
+              </>
+            ) : (
+              <>
+                <div>
+                  <dt>Collection</dt>
+                  <dd>{activeCollection?.id}</dd>
+                </div>
+                <div>
+                  <dt>Core fields</dt>
+                  <dd>{activeItem?.fields.length ?? 0}</dd>
+                </div>
+                <div>
+                  <dt>Extra sections</dt>
+                  <dd>{activeItem?.extraSections.length ?? 0}</dd>
+                </div>
+              </>
+            )}
           </dl>
         </section>
       </aside>

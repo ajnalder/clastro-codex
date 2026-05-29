@@ -9,6 +9,30 @@ export interface CmsSampleItem {
   extraSections: ExtraSectionValue[];
 }
 
+export interface CmsSamplePage {
+  pageId: string;
+  label: string;
+  status: 'draft' | 'published';
+  values: JsonObject;
+}
+
+export const plasticSurgeonPages: CmsSamplePage[] = [
+  {
+    pageId: 'home',
+    label: 'Home',
+    status: 'published',
+    values: {
+      heroEyebrow: 'Plastic and reconstructive surgery',
+      heroHeading: 'Clear, considered care for every stage',
+      heroIntro: 'Consultation-led procedures with calm explanations, honest planning, and careful aftercare.',
+      heroCta: {
+        label: 'Book a consultation',
+        href: '/contact',
+      },
+    },
+  },
+];
+
 export const plasticSurgeonItems: CmsSampleItem[] = [
   {
     collectionId: 'procedures',
@@ -107,5 +131,21 @@ export const plumberItems: CmsSampleItem[] = [
         },
       },
     ],
+  },
+];
+
+export const plumberPages: CmsSamplePage[] = [
+  {
+    pageId: 'home',
+    label: 'Home',
+    status: 'draft',
+    values: {
+      heroHeading: 'Plumbing help that arrives prepared',
+      heroIntro: 'Urgent repairs, planned upgrades, and clear pricing for homes across Tauranga.',
+      emergencyCta: {
+        label: 'Call for urgent plumbing',
+        href: 'tel:+6475550184',
+      },
+    },
   },
 ];
