@@ -1,0 +1,221 @@
+---
+import { plasticSurgeonContract } from '../contracts';
+import { plasticSurgeonItems } from '../cms/sample-content';
+import { createCmsViewModel, type CmsFieldView } from '../cms/view-model';
+import '../styles/cms.css';
+
+const model = createCmsViewModel(plasticSurgeonContract, plasticSurgeonItems, {
+  selectedCollectionId: 'procedures',
+  selectedItemId: 'aft',
+});
+
+const activeCollection = model.activeCollection;
+const activeItem = model.activeItem;
+
+const multilinePrimitives = new Set(['richText', 'longText', 'seoMetadata', 'table', 'faqList', 'callout']);
+
+function isMultiline(field: CmsFieldView) {
+  return multilinePrimitives.has(field.primitive);
+}
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Clastro CMS</title>
+  </head>
+  <body>
+    <main class="cms-shell" data-cms-root>
+      <aside class="cms-sidebar" aria-label="CMS navigation">
+        <a class="cms-brand" href="/">
+          <span class="cms-brand-mark">C</span>
+          <span>
+            <strong>Clastro</strong>
+            <small>Structured editor</small>
+          </span>
+        </a>
+
+        <nav class="cms-nav" aria-label="Collections">
+          <p class="cms-kicker">Collections</p>
+          {model.navigation.map((item) => (
+            <a class:list={['cms-nav-item', { 'is-active': item.active }]} href={`/cms?collection=${item.id}`}>
+              <span>{item.label}</span>
+              <small>{item.itemCount}</small>
+            </a>
+          ))}
+        </nav>
+
+        <div class="cms-sidebar-note">
+          <p class="cms-kicker">Framework rule</p>
+          <p>The backend follows the client’s business language while the content contract keeps the plumbing consistent.</p>
+        </div>
+      </aside>
+
+      <section class="cms-list" aria-label="Collection items">
+        <div class="cms-section-heading">
+          <p class="cms-kicker">Active collection</p>
+          <h1>{activeCollection?.label ?? 'Collection'}</h1>
+          <p>{activeCollection?.itemLabel ?? 'Item'} records generated from the content contract.</p>
+        </div>
+
+        <div class="cms-item-list">
+          {activeCollection?.items.map((item) => (
+            <a class:list={['cms-item-row', { 'is-active': item.active }]} href={`/cms?collection=${activeCollection.id}&item=${item.id}`}>
+              <span>
+                <strong>{item.label}</strong>
+                <small>{item.id}</small>
+              </span>
+              <em>{item.status}</em>
+            </a>
+          ))}
+        </div>
+      </section>
+
+      <section class="cms-editor" aria-label="Item editor">
+        <header class="cms-editor-header">
+          <div>
+            <p class="cms-kicker">Editing globally</p>
+            <h2>{activeItem?.label ?? 'Select an item'}</h2>
+            <p>{activeCollection?.label} / {activeItem?.id}</p>
+          </div>
+          <div class="cms-status-pill" data-status-pill>{activeItem?.status === 'published' ? 'Published' : 'Saved draft'}</div>
+        </header>
+
+        {activeItem && (
+          <form class="cms-form" data-editor-form>
+            <section class="cms-field-section" aria-labelledby="core-fields-heading">
+              <div class="cms-subheading">
+                <p class="cms-kicker">Core schema</p>
+                <h3 id="core-fields-heading">Shared fields</h3>
+              </div>
+
+              <div class="cms-fields">
+                {activeItem.fields.map((field) => (
+                  <label class="cms-field" for={`core-${field.id}`}>
+                    <span>
+                      {field.label}
+                      {field.required && <em>Required</em>}
+                    </span>
+                    {isMultiline(field) ? (
+                      <textarea
+                        class="cms-input cms-textarea"
+                        id={`core-${field.id}`}
+                        name={`core-${field.id}`}
+                        aria-label={field.label}
+                        data-field={field.id}
+                      >{field.value}</textarea>
+                    ) : (
+                      <input
+                        class="cms-input"
+                        id={`core-${field.id}`}
+                        name={`core-${field.id}`}
+                        aria-label={field.label}
+                        value={field.value}
+                        data-field={field.id}
+                      />
+                    )}
+                    <small>{field.primitive}</small>
+                  </label>
+                ))}
+              </div>
+            </section>
+
+            <section class="cms-field-section" aria-labelledby="extra-fields-heading">
+              <div class="cms-subheading">
+                <p class="cms-kicker">Item-specific</p>
+                <h3 id="extra-fields-heading">Extra sections</h3>
+              </div>
+
+              {activeItem.extraSections.length > 0 ? (
+                <div class="cms-extra-stack">
+                  {activeItem.extraSections.map((section) => (
+                    <article class="cms-extra-section">
+                      <div class="cms-extra-title">
+                        <h4>{section.label}</h4>
+                        <small>{section.id}</small>
+                      </div>
+                      <div class="cms-fields">
+                        {section.fields.map((field) => (
+                          <label class="cms-field" for={`${section.id}-${field.id}`}>
+                            <span>
+                              {field.label}
+                              {field.required && <em>Required</em>}
+                            </span>
+                            {isMultiline(field) ? (
+                              <textarea
+                                class="cms-input cms-textarea"
+                                id={`${section.id}-${field.id}`}
+                                name={`${section.id}-${field.id}`}
+                                aria-label={field.label}
+                                data-extra-section={section.id}
+                                data-extra-field={field.id}
+                              >{field.value}</textarea>
+                            ) : (
+                              <input
+                                class="cms-input"
+                                id={`${section.id}-${field.id}`}
+                                name={`${section.id}-${field.id}`}
+                                aria-label={field.label}
+                                value={field.value}
+                                data-extra-section={section.id}
+                                data-extra-field={field.id}
+                              />
+                            )}
+                            <small>{field.primitive}</small>
+                          </label>
+                        ))}
+                      </div>
+                    </article>
+                  ))}
+                </div>
+              ) : (
+                <div class="cms-empty-state">
+                  <strong>No extra sections on this item.</strong>
+                  <p>This item only needs the shared schema for its collection.</p>
+                </div>
+              )}
+            </section>
+          </form>
+        )}
+      </section>
+
+      <aside class="cms-rail" aria-label="Publishing state">
+        <section class="cms-rail-section">
+          <p class="cms-kicker">Draft state</p>
+          <h2 data-status-text>{activeItem?.status === 'published' ? 'Published' : 'Saved draft'}</h2>
+          <p data-status-helper>Autosave protects edits. Publish is the moment content becomes live.</p>
+          <button class="cms-button" type="button" data-publish-button disabled>Publish</button>
+        </section>
+
+        <section class="cms-rail-section">
+          <p class="cms-kicker">Source of truth</p>
+          <p>Editing this item changes the collection source globally. Pages that pull this content should use the updated source on publish.</p>
+        </section>
+
+        <section class="cms-rail-section">
+          <p class="cms-kicker">Content contract</p>
+          <dl class="cms-contract-list">
+            <div>
+              <dt>Collection</dt>
+              <dd>{activeCollection?.id}</dd>
+            </div>
+            <div>
+              <dt>Core fields</dt>
+              <dd>{activeItem?.fields.length ?? 0}</dd>
+            </div>
+            <div>
+              <dt>Extra sections</dt>
+              <dd>{activeItem?.extraSections.length ?? 0}</dd>
+            </div>
+          </dl>
+        </section>
+      </aside>
+    </main>
+
+    <script>
+      import '../cms/client';
+    </script>
+  </body>
+</html>
