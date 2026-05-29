@@ -42,4 +42,56 @@ describe('MemoryContentStore', () => {
       status: 'published',
     });
   });
+
+  it('saves page region drafts separately from published page regions', async () => {
+    const store = new MemoryContentStore();
+
+    await store.savePageRegionDraft({
+      siteId: 'joes-plumbing',
+      pageId: 'home',
+      regionId: 'home.heroHeading',
+      value: 'Draft headline',
+      updatedBy: 'owner',
+    });
+
+    expect(await store.listPublishedPageRegions('joes-plumbing', 'home')).toEqual([]);
+    expect(await store.listPageRegionDrafts('joes-plumbing', 'home')).toMatchObject([
+      {
+        pageId: 'home',
+        regionId: 'home.heroHeading',
+        value: 'Draft headline',
+        status: 'draft',
+      },
+    ]);
+  });
+
+  it('publishes all current page region drafts for a page', async () => {
+    const store = new MemoryContentStore();
+
+    await store.savePageRegionDraft({
+      siteId: 'joes-plumbing',
+      pageId: 'home',
+      regionId: 'home.heroHeading',
+      value: 'Published headline',
+      updatedBy: 'owner',
+    });
+    await store.savePageRegionDraft({
+      siteId: 'joes-plumbing',
+      pageId: 'home',
+      regionId: 'home.heroIntro',
+      value: 'Published intro',
+      updatedBy: 'owner',
+    });
+
+    const published = await store.publishPageRegionDrafts('joes-plumbing', 'home', 'owner');
+
+    expect(published).toHaveLength(2);
+    expect(await store.listPublishedPageRegions('joes-plumbing', 'home')).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ regionId: 'home.heroHeading', value: 'Published headline', status: 'published' }),
+        expect.objectContaining({ regionId: 'home.heroIntro', value: 'Published intro', status: 'published' }),
+      ]),
+    );
+    expect(await store.listPageRegionDrafts('joes-plumbing', 'home')).toEqual([]);
+  });
 });

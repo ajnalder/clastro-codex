@@ -1,4 +1,12 @@
-import type { ContentItem, ContentStore, ExtraSectionValue, JsonObject, SaveDraftInput } from './types';
+import type {
+  ContentItem,
+  ContentStore,
+  ExtraSectionValue,
+  JsonObject,
+  PageRegionContent,
+  SaveDraftInput,
+  SavePageRegionDraftInput,
+} from './types';
 
 function now(): string {
   return new Date().toISOString();
@@ -20,6 +28,18 @@ function rowToItem(row: Record<string, unknown>): ContentItem {
     status: row.status === 'published' ? 'published' : 'draft',
     values: parseJsonObject(String(row.values_json)),
     extraSections: parseExtraSections(String(row.extra_sections_json)),
+    updatedBy: String(row.updated_by),
+    updatedAt: String(row.updated_at),
+  };
+}
+
+function rowToPageRegion(row: Record<string, unknown>): PageRegionContent {
+  return {
+    siteId: String(row.site_id),
+    pageId: String(row.page_id),
+    regionId: String(row.region_id),
+    status: row.status === 'published' ? 'published' : 'draft',
+    value: String(row.value_html),
     updatedBy: String(row.updated_by),
     updatedAt: String(row.updated_at),
   };
@@ -103,6 +123,58 @@ export class D1ContentStore implements ContentStore {
     return result.results.map(rowToItem);
   }
 
+  async savePageRegionDraft(input: SavePageRegionDraftInput): Promise<PageRegionContent> {
+    const updatedAt = now();
+    await this.db
+      .prepare(
+        `INSERT OR REPLACE INTO page_region_values
+          (site_id, page_id, region_id, status, value_html, updated_by, updated_at)
+        VALUES (?, ?, ?, 'draft', ?, ?, ?)`,
+      )
+      .bind(input.siteId, input.pageId, input.regionId, input.value, input.updatedBy, updatedAt)
+      .run();
+
+    return {
+      ...input,
+      status: 'draft',
+      updatedAt,
+    };
+  }
+
+  async listPageRegionDrafts(siteId: string, pageId: string): Promise<PageRegionContent[]> {
+    return this.listPageRegions(siteId, pageId, 'draft');
+  }
+
+  async listPublishedPageRegions(siteId: string, pageId: string): Promise<PageRegionContent[]> {
+    return this.listPageRegions(siteId, pageId, 'published');
+  }
+
+  async publishPageRegionDrafts(siteId: string, pageId: string, updatedBy: string): Promise<PageRegionContent[]> {
+    const drafts = await this.listPageRegionDrafts(siteId, pageId);
+    const updatedAt = now();
+
+    for (const draft of drafts) {
+      await this.db
+        .prepare(
+          `INSERT OR REPLACE INTO page_region_values
+            (site_id, page_id, region_id, status, value_html, updated_by, updated_at)
+          VALUES (?, ?, ?, 'published', ?, ?, ?)`,
+        )
+        .bind(siteId, pageId, draft.regionId, draft.value, updatedBy, updatedAt)
+        .run();
+    }
+
+    await this.db
+      .prepare(
+        `DELETE FROM page_region_values
+        WHERE site_id = ? AND page_id = ? AND status = 'draft'`,
+      )
+      .bind(siteId, pageId)
+      .run();
+
+    return this.listPublishedPageRegions(siteId, pageId);
+  }
+
   private async getItem(
     siteId: string,
     collectionId: string,
@@ -118,5 +190,22 @@ export class D1ContentStore implements ContentStore {
       .first<Record<string, unknown>>();
 
     return row ? rowToItem(row) : null;
+  }
+
+  private async listPageRegions(
+    siteId: string,
+    pageId: string,
+    status: 'draft' | 'published',
+  ): Promise<PageRegionContent[]> {
+    const result = await this.db
+      .prepare(
+        `SELECT * FROM page_region_values
+        WHERE site_id = ? AND page_id = ? AND status = ?
+        ORDER BY region_id`,
+      )
+      .bind(siteId, pageId, status)
+      .all<Record<string, unknown>>();
+
+    return result.results.map(rowToPageRegion);
   }
 }

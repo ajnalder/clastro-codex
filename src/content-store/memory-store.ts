@@ -1,16 +1,26 @@
-import type { ContentItem, ContentStore, SaveDraftInput } from './types';
+import type { ContentItem, ContentStore, PageRegionContent, SaveDraftInput, SavePageRegionDraftInput } from './types';
 
 function itemKey(siteId: string, collectionId: string, itemId: string): string {
   return `${siteId}:${collectionId}:${itemId}`;
+}
+
+function pageRegionKey(siteId: string, pageId: string, regionId: string): string {
+  return `${siteId}:${pageId}:${regionId}`;
 }
 
 function cloneItem(item: ContentItem): ContentItem {
   return structuredClone(item);
 }
 
+function clonePageRegion(region: PageRegionContent): PageRegionContent {
+  return structuredClone(region);
+}
+
 export class MemoryContentStore implements ContentStore {
   private drafts = new Map<string, ContentItem>();
   private published = new Map<string, ContentItem>();
+  private pageRegionDrafts = new Map<string, PageRegionContent>();
+  private pageRegionPublished = new Map<string, PageRegionContent>();
 
   async saveDraft(input: SaveDraftInput): Promise<ContentItem> {
     const item: ContentItem = {
@@ -52,5 +62,47 @@ export class MemoryContentStore implements ContentStore {
     return [...this.published.values()]
       .filter((item) => item.siteId === siteId)
       .map(cloneItem);
+  }
+
+  async savePageRegionDraft(input: SavePageRegionDraftInput): Promise<PageRegionContent> {
+    const region: PageRegionContent = {
+      ...input,
+      status: 'draft',
+      updatedAt: new Date().toISOString(),
+    };
+    this.pageRegionDrafts.set(pageRegionKey(input.siteId, input.pageId, input.regionId), clonePageRegion(region));
+    return clonePageRegion(region);
+  }
+
+  async listPageRegionDrafts(siteId: string, pageId: string): Promise<PageRegionContent[]> {
+    return [...this.pageRegionDrafts.values()]
+      .filter((region) => region.siteId === siteId && region.pageId === pageId)
+      .sort((left, right) => left.regionId.localeCompare(right.regionId))
+      .map(clonePageRegion);
+  }
+
+  async listPublishedPageRegions(siteId: string, pageId: string): Promise<PageRegionContent[]> {
+    return [...this.pageRegionPublished.values()]
+      .filter((region) => region.siteId === siteId && region.pageId === pageId)
+      .sort((left, right) => left.regionId.localeCompare(right.regionId))
+      .map(clonePageRegion);
+  }
+
+  async publishPageRegionDrafts(siteId: string, pageId: string, updatedBy: string): Promise<PageRegionContent[]> {
+    const drafts = await this.listPageRegionDrafts(siteId, pageId);
+    const publishedAt = new Date().toISOString();
+    const published = drafts.map((draft) => ({
+      ...draft,
+      status: 'published' as const,
+      updatedBy,
+      updatedAt: publishedAt,
+    }));
+
+    for (const region of published) {
+      this.pageRegionPublished.set(pageRegionKey(region.siteId, region.pageId, region.regionId), clonePageRegion(region));
+      this.pageRegionDrafts.delete(pageRegionKey(region.siteId, region.pageId, region.regionId));
+    }
+
+    return published.map(clonePageRegion);
   }
 }

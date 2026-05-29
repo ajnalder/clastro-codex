@@ -27,6 +27,17 @@ CREATE TABLE published_snapshots (
   PRIMARY KEY (site_id, snapshot_id)
 );
 
+CREATE TABLE page_region_values (
+  site_id TEXT NOT NULL,
+  page_id TEXT NOT NULL,
+  region_id TEXT NOT NULL,
+  status TEXT NOT NULL CHECK (status IN ('draft', 'published')),
+  value_html TEXT NOT NULL,
+  updated_by TEXT NOT NULL,
+  updated_at TEXT NOT NULL,
+  PRIMARY KEY (site_id, page_id, region_id, status)
+);
+
 CREATE TABLE media_assets (
   site_id TEXT NOT NULL,
   asset_id TEXT NOT NULL,

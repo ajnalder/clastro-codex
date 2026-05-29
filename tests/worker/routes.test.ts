@@ -53,4 +53,89 @@ describe('handleApiRequest', () => {
       },
     });
   });
+
+  it('saves and lists page region drafts through the API', async () => {
+    const store = new MemoryContentStore();
+    const saveResponse = await handleApiRequest(
+      new Request('https://cms.test/api/page-regions/draft', {
+        method: 'POST',
+        body: JSON.stringify({
+          siteId: 'joes-plumbing',
+          pageId: 'home',
+          regionId: 'home.heroHeading',
+          value: 'Draft homepage heading',
+          updatedBy: 'owner',
+        }),
+      }),
+      store,
+    );
+    const listResponse = await handleApiRequest(
+      new Request('https://cms.test/api/page-regions/draft?siteId=joes-plumbing&pageId=home'),
+      store,
+    );
+
+    expect(saveResponse.status).toBe(200);
+    await expect(saveResponse.json()).resolves.toMatchObject({
+      regionId: 'home.heroHeading',
+      value: 'Draft homepage heading',
+      status: 'draft',
+    });
+    await expect(listResponse.json()).resolves.toMatchObject({
+      regions: [
+        {
+          regionId: 'home.heroHeading',
+          value: 'Draft homepage heading',
+          status: 'draft',
+        },
+      ],
+    });
+  });
+
+  it('publishes page region drafts through the API', async () => {
+    const store = new MemoryContentStore();
+    await store.savePageRegionDraft({
+      siteId: 'joes-plumbing',
+      pageId: 'home',
+      regionId: 'home.heroHeading',
+      value: 'Published homepage heading',
+      updatedBy: 'owner',
+    });
+
+    const publishResponse = await handleApiRequest(
+      new Request('https://cms.test/api/page-regions/publish', {
+        method: 'POST',
+        body: JSON.stringify({
+          siteId: 'joes-plumbing',
+          pageId: 'home',
+          updatedBy: 'owner',
+        }),
+      }),
+      store,
+    );
+
+    expect(publishResponse.status).toBe(200);
+    await expect(publishResponse.json()).resolves.toMatchObject({
+      regions: [
+        {
+          regionId: 'home.heroHeading',
+          value: 'Published homepage heading',
+          status: 'published',
+        },
+      ],
+    });
+
+    const publishedResponse = await handleApiRequest(
+      new Request('https://cms.test/api/page-regions/published?siteId=joes-plumbing&pageId=home'),
+      store,
+    );
+    await expect(publishedResponse.json()).resolves.toMatchObject({
+      regions: [
+        {
+          regionId: 'home.heroHeading',
+          value: 'Published homepage heading',
+          status: 'published',
+        },
+      ],
+    });
+  });
 });

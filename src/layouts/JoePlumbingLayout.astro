@@ -5,11 +5,12 @@ interface Props {
   title: string;
   metaDescription: string;
   schema?: string;
+  pageId: string;
   currentPath: string;
   editMode: boolean;
 }
 
-const { title, metaDescription, schema, currentPath, editMode } = Astro.props;
+const { title, metaDescription, schema, pageId, currentPath } = Astro.props;
 const navItems = [
   { href: '/joe-plumbing', label: 'Home' },
   { href: '/joe-plumbing/about', label: 'About' },
@@ -29,8 +30,8 @@ const navItems = [
     {schema && <script type="application/ld+json" set:html={schema} />}
   </head>
   <body class="joe-site">
-    <div class="joe-edit-bar" data-joe-edit-root hidden>
-      <a href="/cms?view=pages&page=home">Back to CMS</a>
+    <div class="joe-edit-bar" data-joe-edit-root data-site-id="joes-plumbing" data-page-id={pageId} hidden>
+      <a href={`/cms?view=pages&page=${pageId}`}>Back to CMS</a>
       <span data-joe-edit-status>Published</span>
       <button type="button" data-joe-publish disabled>Publish</button>
     </div>

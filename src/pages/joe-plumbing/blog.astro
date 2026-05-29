@@ -11,6 +11,7 @@ const editMode = Astro.url.searchParams.get('clastro-edit') === '1';
   title={getPageString(page, 'metaTitle')}
   metaDescription={getPageString(page, 'metaDescription')}
   schema={getPageString(page, 'schema')}
+  pageId="blogPage"
   currentPath="/joe-plumbing/blog"
   editMode={editMode}
 >
@@ -41,4 +42,3 @@ const editMode = Astro.url.searchParams.get('clastro-edit') === '1';
     </section>
   </main>
 </JoePlumbingLayout>
-

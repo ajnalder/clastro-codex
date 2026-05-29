@@ -17,6 +17,31 @@ class FakeD1Statement {
   }
 
   async run(): Promise<void> {
+    if (this.sql.includes('DELETE FROM page_region_values')) {
+      const [siteId, pageId] = this.bindings;
+      for (const [key, row] of this.rows.entries()) {
+        if (key.startsWith('page:') && row.site_id === siteId && row.page_id === pageId && row.status === 'draft') {
+          this.rows.delete(key);
+        }
+      }
+      return;
+    }
+
+    if (this.sql.includes('INSERT OR REPLACE INTO page_region_values')) {
+      const [siteId, pageId, regionId, valueHtml, updatedBy, updatedAt] = this.bindings;
+      const status = this.sql.includes("'published'") ? 'published' : 'draft';
+      this.rows.set(`page:${siteId}:${pageId}:${regionId}:${status}`, {
+        site_id: siteId,
+        page_id: pageId,
+        region_id: regionId,
+        status,
+        value_html: valueHtml,
+        updated_by: updatedBy,
+        updated_at: updatedAt,
+      });
+      return;
+    }
+
     if (!this.sql.includes('INSERT OR REPLACE INTO content_items')) {
       throw new Error(`Unsupported run SQL: ${this.sql}`);
     }
@@ -41,6 +66,15 @@ class FakeD1Statement {
   }
 
   async all(): Promise<{ results: StoredRow[] }> {
+    if (this.sql.includes('FROM page_region_values')) {
+      const [siteId, pageId, status] = this.bindings;
+      return {
+        results: [...this.rows.values()]
+          .filter((row) => row.site_id === siteId && row.page_id === pageId && row.status === status)
+          .sort((left, right) => String(left.region_id).localeCompare(String(right.region_id))),
+      };
+    }
+
     const [siteId] = this.bindings;
     return {
       results: [...this.rows.values()].filter(
@@ -79,5 +113,37 @@ describe('D1ContentStore', () => {
     expect(published.values.title).toBe('AFT Fat Transfer');
     expect(publishedItems).toHaveLength(1);
     expect(publishedItems[0].extraSections[0].type).toBe('recoveryTimeline');
+  });
+
+  it('saves and publishes page region drafts', async () => {
+    const store = new D1ContentStore(new FakeD1Database() as unknown as D1Database);
+
+    await store.savePageRegionDraft({
+      siteId: 'joes-plumbing',
+      pageId: 'home',
+      regionId: 'home.heroHeading',
+      value: 'Draft heading',
+      updatedBy: 'owner',
+    });
+
+    expect(await store.listPublishedPageRegions('joes-plumbing', 'home')).toEqual([]);
+    expect(await store.listPageRegionDrafts('joes-plumbing', 'home')).toMatchObject([
+      {
+        regionId: 'home.heroHeading',
+        value: 'Draft heading',
+        status: 'draft',
+      },
+    ]);
+
+    const published = await store.publishPageRegionDrafts('joes-plumbing', 'home', 'owner');
+
+    expect(published).toMatchObject([
+      {
+        regionId: 'home.heroHeading',
+        value: 'Draft heading',
+        status: 'published',
+      },
+    ]);
+    expect(await store.listPageRegionDrafts('joes-plumbing', 'home')).toEqual([]);
   });
 });
