@@ -4,9 +4,14 @@ import { plasticSurgeonItems } from '../cms/sample-content';
 import { createCmsViewModel, type CmsFieldView } from '../cms/view-model';
 import '../styles/cms.css';
 
+export const prerender = false;
+
+const selectedCollectionId = Astro.url.searchParams.get('collection') ?? undefined;
+const selectedItemId = Astro.url.searchParams.get('item') ?? undefined;
+
 const model = createCmsViewModel(plasticSurgeonContract, plasticSurgeonItems, {
-  selectedCollectionId: 'procedures',
-  selectedItemId: 'aft',
+  selectedCollectionId,
+  selectedItemId,
 });
 
 const activeCollection = model.activeCollection;
@@ -24,6 +29,7 @@ function isMultiline(field: CmsFieldView) {
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <title>Clastro CMS</title>
   </head>
   <body>

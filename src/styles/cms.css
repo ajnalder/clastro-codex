@@ -1,16 +1,16 @@
 :root {
   color-scheme: light;
-  --cms-bg: #f6f5f2;
+  --cms-bg: #f6f8f6;
   --cms-panel: #ffffff;
-  --cms-panel-soft: #fbfaf8;
-  --cms-line: #d9d5cc;
-  --cms-line-strong: #b9b2a7;
-  --cms-text: #24231f;
-  --cms-muted: #706b63;
-  --cms-soft: #8c8579;
+  --cms-panel-soft: #f9fbf9;
+  --cms-line: #d7ddd6;
+  --cms-line-strong: #aeb9b0;
+  --cms-text: #242720;
+  --cms-muted: #667168;
+  --cms-soft: #7d887f;
   --cms-accent: #276f5f;
   --cms-accent-dark: #1f5a4d;
-  --cms-warning: #8a5d12;
+  --cms-warning: #755f1d;
   --cms-radius: 8px;
   font-family: Geist, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
@@ -51,7 +51,7 @@ textarea {
   flex-direction: column;
   gap: 28px;
   padding: 18px;
-  background: #ece9e1;
+  background: #e8eee8;
 }
 
 .cms-brand {
@@ -70,8 +70,8 @@ textarea {
   place-items: center;
   border: 1px solid var(--cms-line-strong);
   border-radius: var(--cms-radius);
-  background: #24231f;
-  color: #f9f7f0;
+  background: #242720;
+  color: #fbfdf9;
   font-weight: 700;
 }
 
@@ -178,7 +178,7 @@ textarea {
 
 .cms-item-row {
   align-items: flex-start;
-  background: #fffdf9;
+  background: #fffefd;
 }
 
 .cms-item-row strong,
@@ -282,7 +282,7 @@ textarea {
   padding: 10px 11px;
   border: 1px solid var(--cms-line);
   border-radius: var(--cms-radius);
-  background: #fffefa;
+  background: #fffefd;
   color: var(--cms-text);
   outline: none;
   transition: border-color 160ms ease, box-shadow 160ms ease;
@@ -334,7 +334,7 @@ textarea {
   align-content: start;
   gap: 0;
   padding: 22px 18px;
-  background: #f1eee7;
+  background: #edf2ed;
   border-right: 0;
 }
 
@@ -354,7 +354,7 @@ textarea {
   border: 1px solid var(--cms-accent-dark);
   border-radius: var(--cms-radius);
   background: var(--cms-accent);
-  color: #fffefa;
+  color: #fbfdf9;
   cursor: pointer;
   font-weight: 800;
   transition: background 180ms ease, transform 180ms ease, opacity 180ms ease;
