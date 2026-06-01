@@ -77,11 +77,13 @@ describe('example contracts', () => {
   it("ships Joe's Plumbing with pages, services, and blog posts", () => {
     const contract = parseContentContract(plumberContract);
     const pagePaths = contract.pages.map((page) => page.path);
+    const homePage = contract.pages.find((page) => page.id === 'home');
     const services = contract.collections.find((collection) => collection.id === 'services');
     const blogPosts = contract.collections.find((collection) => collection.id === 'blogPosts');
 
     expect(contract.siteId).toBe('joes-plumbing');
     expect(pagePaths).toEqual(['/joe-plumbing', '/joe-plumbing/about', '/joe-plumbing/services', '/joe-plumbing/blog']);
+    expect(homePage?.regions.map((region) => region.id)).toContain('serviceHeading');
     expect(services?.extraSectionTypes.map((section) => section.id)).toContain('serviceAreaList');
     expect(services?.extraSectionTypes.map((section) => section.id)).toContain('priceGuide');
     expect(blogPosts?.itemLabel).toBe('Blog Post');

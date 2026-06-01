@@ -85,6 +85,7 @@ describe('createCmsViewModel', () => {
     expect(model.activePage?.fields.find((field) => field.id === 'metaDescription')?.value).toBe(
       'Emergency plumbing and planned repair services across Tauranga.',
     );
+    expect(plumberPages.find((page) => page.pageId === 'home')?.values.serviceHeading).toBe('Services Joe keeps ready.');
     expect(model.activePage?.editHref).toBe('/joe-plumbing?clastro-edit=1');
   });
 });

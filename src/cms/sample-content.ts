@@ -229,6 +229,7 @@ export const plumberPages: CmsSamplePage[] = [
         label: 'Book a plumber',
         href: '/joe-plumbing/services',
       },
+      serviceHeading: 'Services Joe keeps ready.',
       serviceIntro: 'From burst pipes to tired hot water systems, the team keeps the work clear, tidy, and easy to understand.',
     },
   },

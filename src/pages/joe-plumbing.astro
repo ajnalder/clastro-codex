@@ -57,7 +57,9 @@ const featuredPost = joeBlogPosts[0];
     <section class="joe-band is-white">
       <div class="joe-section-inner">
         <div class="joe-section-heading">
-          <h2>Services Joe keeps ready.</h2>
+          <JoeEditable as="h2" id="home.serviceHeading" editMode={editMode}>
+            {getPageString(page, 'serviceHeading')}
+          </JoeEditable>
           <JoeEditable as="p" id="home.serviceIntro" editMode={editMode}>
             {getPageString(page, 'serviceIntro')}
           </JoeEditable>
