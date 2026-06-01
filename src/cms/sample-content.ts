@@ -231,6 +231,10 @@ export const plumberPages: CmsSamplePage[] = [
       },
       serviceHeading: 'Services Joe keeps ready.',
       serviceIntro: 'From burst pipes to tired hot water systems, the team keeps the work clear, tidy, and easy to understand.',
+      blogCta: {
+        label: 'Read the blog',
+        href: '/joe-plumbing/blog',
+      },
     },
   },
   {

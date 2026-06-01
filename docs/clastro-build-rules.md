@@ -6,7 +6,7 @@ Every piece of client-facing site text must be editable unless it is deliberatel
 
 Page templates should not contain bare client-facing strings. Each string must be one of:
 
-- `Page editable`: static page copy wrapped as an editable page region, including headings, eyebrows, intros, section headings, captions, CTA labels, footer copy, and similar site content.
+- `Page editable`: static page copy wrapped as an editable page region, including headings, eyebrows, intros, section headings, captions, CTA labels and destinations, footer copy, and similar site content.
 - `CMS sourced`: collection-backed content such as service cards, blog post titles, procedure summaries, product names, pricing, SKUs, and categories.
 - `System UI`: editor interface labels such as Back to CMS, Publish, toolbar labels, and internal app controls.
 

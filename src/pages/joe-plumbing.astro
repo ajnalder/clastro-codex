@@ -12,6 +12,7 @@ import {
 
 const page = getJoePage('home');
 const cta = getPageLink(page, 'primaryCta');
+const blogCta = getPageLink(page, 'blogCta');
 const editMode = Astro.url.searchParams.get('clastro-edit') === '1';
 const featuredServices = joeServices.slice(0, 3);
 const featuredPost = joeBlogPosts[0];
@@ -39,7 +40,7 @@ const featuredPost = joeBlogPosts[0];
             {getPageString(page, 'heroIntro')}
           </JoeEditable>
           <div class="joe-hero-actions">
-            <a class="joe-button" href={cta.href} data-editable-link={editMode ? 'primaryCta' : undefined}>{cta.label}</a>
+            <a class="joe-button" href={cta.href} data-editable-link="home.primaryCta">{cta.label}</a>
             <span class="joe-tag">Same-day emergency slots</span>
           </div>
         </div>
@@ -83,7 +84,7 @@ const featuredPost = joeBlogPosts[0];
           <h2>{getCollectionString(featuredPost, 'title')}</h2>
           <p class="joe-copy">{getCollectionString(featuredPost, 'excerpt')}</p>
         </div>
-        <a class="joe-button" href="/joe-plumbing/blog">Read the blog</a>
+        <a class="joe-button" href={blogCta.href} data-editable-link="home.blogCta">{blogCta.label}</a>
       </div>
     </section>
   </main>

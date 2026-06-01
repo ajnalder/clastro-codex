@@ -64,6 +64,7 @@ describe('handleApiRequest', () => {
           pageId: 'home',
           regionId: 'home.heroHeading',
           value: 'Draft homepage heading',
+          href: '/joe-plumbing/services',
           elementType: 'h1',
           size: 'small',
           updatedBy: 'owner',
@@ -80,6 +81,7 @@ describe('handleApiRequest', () => {
     await expect(saveResponse.json()).resolves.toMatchObject({
       regionId: 'home.heroHeading',
       value: 'Draft homepage heading',
+      href: '/joe-plumbing/services',
       elementType: 'h1',
       size: 'small',
       status: 'draft',
@@ -89,6 +91,7 @@ describe('handleApiRequest', () => {
         {
           regionId: 'home.heroHeading',
           value: 'Draft homepage heading',
+          href: '/joe-plumbing/services',
           elementType: 'h1',
           size: 'small',
           status: 'draft',

@@ -45,6 +45,7 @@ function rowToPageRegion(row: Record<string, unknown>): PageRegionContent {
     regionId: String(row.region_id),
     status: row.status === 'published' ? 'published' : 'draft',
     value: String(row.value_html),
+    href: typeof row.href === 'string' && row.href.length > 0 ? row.href : undefined,
     elementType: format.elementType,
     size: format.size,
     updatedBy: String(row.updated_by),
@@ -136,10 +137,20 @@ export class D1ContentStore implements ContentStore {
     await this.db
       .prepare(
         `INSERT OR REPLACE INTO page_region_values
-          (site_id, page_id, region_id, status, value_html, element_type, size, updated_by, updated_at)
-        VALUES (?, ?, ?, 'draft', ?, ?, ?, ?, ?)`,
+          (site_id, page_id, region_id, status, value_html, href, element_type, size, updated_by, updated_at)
+        VALUES (?, ?, ?, 'draft', ?, ?, ?, ?, ?, ?)`,
       )
-      .bind(input.siteId, input.pageId, input.regionId, input.value, format.elementType, format.size, input.updatedBy, updatedAt)
+      .bind(
+        input.siteId,
+        input.pageId,
+        input.regionId,
+        input.value,
+        input.href ?? null,
+        format.elementType,
+        format.size,
+        input.updatedBy,
+        updatedAt,
+      )
       .run();
 
     return {
@@ -166,10 +177,10 @@ export class D1ContentStore implements ContentStore {
       await this.db
         .prepare(
           `INSERT OR REPLACE INTO page_region_values
-            (site_id, page_id, region_id, status, value_html, element_type, size, updated_by, updated_at)
-          VALUES (?, ?, ?, 'published', ?, ?, ?, ?, ?)`,
+            (site_id, page_id, region_id, status, value_html, href, element_type, size, updated_by, updated_at)
+          VALUES (?, ?, ?, 'published', ?, ?, ?, ?, ?, ?)`,
         )
-        .bind(siteId, pageId, draft.regionId, draft.value, draft.elementType, draft.size, updatedBy, updatedAt)
+        .bind(siteId, pageId, draft.regionId, draft.value, draft.href ?? null, draft.elementType, draft.size, updatedBy, updatedAt)
         .run();
     }
 

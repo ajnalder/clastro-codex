@@ -28,7 +28,7 @@ class FakeD1Statement {
     }
 
     if (this.sql.includes('INSERT OR REPLACE INTO page_region_values')) {
-      const [siteId, pageId, regionId, valueHtml, elementType, size, updatedBy, updatedAt] = this.bindings;
+      const [siteId, pageId, regionId, valueHtml, href, elementType, size, updatedBy, updatedAt] = this.bindings;
       const status = this.sql.includes("'published'") ? 'published' : 'draft';
       this.rows.set(`page:${siteId}:${pageId}:${regionId}:${status}`, {
         site_id: siteId,
@@ -36,6 +36,7 @@ class FakeD1Statement {
         region_id: regionId,
         status,
         value_html: valueHtml,
+        href,
         element_type: elementType,
         size,
         updated_by: updatedBy,
@@ -129,29 +130,53 @@ describe('D1ContentStore', () => {
       size: 'small',
       updatedBy: 'owner',
     });
+    await store.savePageRegionDraft({
+      siteId: 'joes-plumbing',
+      pageId: 'home',
+      regionId: 'home.primaryCta',
+      value: 'Book now',
+      href: '/joe-plumbing/services',
+      updatedBy: 'owner',
+    });
 
     expect(await store.listPublishedPageRegions('joes-plumbing', 'home')).toEqual([]);
-    expect(await store.listPageRegionDrafts('joes-plumbing', 'home')).toMatchObject([
-      {
-        regionId: 'home.heroHeading',
-        value: 'Draft heading',
-        elementType: 'h1',
-        size: 'small',
-        status: 'draft',
-      },
-    ]);
+    expect(await store.listPageRegionDrafts('joes-plumbing', 'home')).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          regionId: 'home.heroHeading',
+          value: 'Draft heading',
+          elementType: 'h1',
+          size: 'small',
+          status: 'draft',
+        }),
+        expect.objectContaining({
+          regionId: 'home.primaryCta',
+          value: 'Book now',
+          href: '/joe-plumbing/services',
+          status: 'draft',
+        }),
+      ]),
+    );
 
     const published = await store.publishPageRegionDrafts('joes-plumbing', 'home', 'owner');
 
-    expect(published).toMatchObject([
-      {
-        regionId: 'home.heroHeading',
-        value: 'Draft heading',
-        elementType: 'h1',
-        size: 'small',
-        status: 'published',
-      },
-    ]);
+    expect(published).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          regionId: 'home.heroHeading',
+          value: 'Draft heading',
+          elementType: 'h1',
+          size: 'small',
+          status: 'published',
+        }),
+        expect.objectContaining({
+          regionId: 'home.primaryCta',
+          value: 'Book now',
+          href: '/joe-plumbing/services',
+          status: 'published',
+        }),
+      ]),
+    );
     expect(await store.listPageRegionDrafts('joes-plumbing', 'home')).toEqual([]);
   });
 });

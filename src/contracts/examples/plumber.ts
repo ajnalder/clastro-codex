@@ -67,6 +67,7 @@ export const plumberContract: ContentContract = {
         { id: 'primaryCta', label: 'Primary CTA', primitive: 'buttonLink', required: true },
         { id: 'serviceHeading', label: 'Service Heading', primitive: 'shortText', required: true },
         { id: 'serviceIntro', label: 'Service Intro', primitive: 'richText', required: true },
+        { id: 'blogCta', label: 'Blog CTA', primitive: 'buttonLink', required: true },
       ],
     },
     {

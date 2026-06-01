@@ -33,6 +33,7 @@ CREATE TABLE page_region_values (
   region_id TEXT NOT NULL,
   status TEXT NOT NULL CHECK (status IN ('draft', 'published')),
   value_html TEXT NOT NULL,
+  href TEXT,
   element_type TEXT NOT NULL DEFAULT 'p' CHECK (element_type IN ('p', 'h1', 'h2', 'h3', 'blockquote')),
   size TEXT NOT NULL DEFAULT 'default' CHECK (size IN ('default', 'small', 'large')),
   updated_by TEXT NOT NULL,

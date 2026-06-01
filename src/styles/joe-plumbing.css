@@ -377,7 +377,8 @@ body.joe-site a {
 }
 
 .joe-edit-bar[hidden],
-.joe-edit-toolbar[hidden] {
+.joe-edit-toolbar[hidden],
+.joe-link-editor[hidden] {
   display: none;
 }
 
@@ -405,19 +406,13 @@ body.joe-site a {
   outline: 2px solid var(--joe-red);
 }
 
-.joe-edit-toolbar {
+.joe-edit-toolbar,
+.joe-link-editor {
   position: fixed;
   top: 74px;
   left: 16px;
   z-index: 11;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  align-items: center;
-  width: min(940px, calc(100vw - 32px));
-  max-width: calc(100vw - 32px);
   margin: 0;
-  padding: 8px;
   border: 1px solid #cad5ce;
   border-radius: 10px;
   background: var(--joe-panel);
@@ -426,7 +421,27 @@ body.joe-site a {
   will-change: top, left;
 }
 
-.joe-edit-toolbar::after {
+.joe-edit-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  width: min(940px, calc(100vw - 32px));
+  max-width: calc(100vw - 32px);
+  padding: 8px;
+}
+
+.joe-link-editor {
+  display: grid;
+  grid-template-columns: minmax(160px, 1fr) minmax(220px, 1.35fr);
+  gap: 8px;
+  width: min(560px, calc(100vw - 32px));
+  max-width: calc(100vw - 32px);
+  padding: 8px;
+}
+
+.joe-edit-toolbar::after,
+.joe-link-editor::after {
   position: absolute;
   left: 50%;
   width: 12px;
@@ -438,13 +453,42 @@ body.joe-site a {
   transform: translateX(-50%) rotate(45deg);
 }
 
-.joe-edit-toolbar[data-placement='above']::after {
+.joe-edit-toolbar[data-placement='above']::after,
+.joe-link-editor[data-placement='above']::after {
   bottom: -7px;
 }
 
-.joe-edit-toolbar[data-placement='below']::after {
+.joe-edit-toolbar[data-placement='below']::after,
+.joe-link-editor[data-placement='below']::after {
   top: -7px;
   transform: translateX(-50%) rotate(225deg);
+}
+
+.joe-link-editor label {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+  padding: 7px 8px;
+  border: 1px solid var(--joe-line);
+  border-radius: var(--joe-radius);
+  background: #f8faf6;
+}
+
+.joe-link-editor span {
+  color: var(--joe-muted);
+  font-size: 0.76rem;
+  font-weight: 800;
+}
+
+.joe-link-editor input {
+  width: 100%;
+  min-width: 0;
+  border: 0;
+  background: transparent;
+  color: var(--joe-ink);
+  font: inherit;
+  font-weight: 800;
+  outline: 0;
 }
 
 .joe-toolbar-select {
@@ -538,5 +582,9 @@ body.joe-site a {
   .joe-hero h1,
   .joe-page-hero h1 {
     font-size: 3.2rem;
+  }
+
+  .joe-link-editor {
+    grid-template-columns: 1fr;
   }
 }

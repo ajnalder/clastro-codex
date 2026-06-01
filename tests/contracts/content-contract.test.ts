@@ -83,7 +83,9 @@ describe('example contracts', () => {
 
     expect(contract.siteId).toBe('joes-plumbing');
     expect(pagePaths).toEqual(['/joe-plumbing', '/joe-plumbing/about', '/joe-plumbing/services', '/joe-plumbing/blog']);
-    expect(homePage?.regions.map((region) => region.id)).toContain('serviceHeading');
+    expect(homePage?.regions.map((region) => region.id)).toEqual(
+      expect.arrayContaining(['serviceHeading', 'primaryCta', 'blogCta']),
+    );
     expect(services?.extraSectionTypes.map((section) => section.id)).toContain('serviceAreaList');
     expect(services?.extraSectionTypes.map((section) => section.id)).toContain('priceGuide');
     expect(blogPosts?.itemLabel).toBe('Blog Post');

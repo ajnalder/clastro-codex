@@ -8,20 +8,25 @@ import { calculateFloatingToolbarPosition } from './toolbar-position';
 
 const root = document.querySelector<HTMLElement>('[data-joe-edit-root]');
 const toolbar = document.querySelector<HTMLElement>('[data-joe-toolbar]');
+const linkEditor = document.querySelector<HTMLElement>('[data-joe-link-editor]');
 const status = document.querySelector<HTMLElement>('[data-joe-edit-status]');
 const publishButton = document.querySelector<HTMLButtonElement>('[data-joe-publish]');
 const elementSelect = toolbar?.querySelector('[data-editor-element]') as HTMLSelectElement | null | undefined;
 const sizeSelect = toolbar?.querySelector('[data-editor-size]') as HTMLSelectElement | null | undefined;
+const linkLabelInput = linkEditor?.querySelector('[data-link-label]') as HTMLInputElement | null | undefined;
+const linkHrefInput = linkEditor?.querySelector('[data-link-href]') as HTMLInputElement | null | undefined;
 const editModeEnabled = new URLSearchParams(window.location.search).get('clastro-edit') === '1';
 const siteId = root?.dataset.siteId ?? 'joes-plumbing';
 const pageId = root?.dataset.pageId ?? 'home';
 const saveTimers = new Map<string, number>();
 let activeRegion: HTMLElement | null = null;
+let activeLink: HTMLAnchorElement | null = null;
 
 interface PageRegionResponse {
   regions: Array<{
     regionId: string;
     value: string;
+    href?: string;
     elementType?: PageRegionElementType;
     size?: PageRegionSize;
     status: 'draft' | 'published';
@@ -59,28 +64,52 @@ function positionToolbar(target: HTMLElement): void {
     return;
   }
   activeRegion = target;
+  activeLink = null;
   toolbar.hidden = false;
+  if (linkEditor) {
+    linkEditor.hidden = true;
+  }
   updateToolbarState(target);
+  positionFloatingSurface(toolbar, target);
+}
+
+function positionLinkEditor(target: HTMLAnchorElement, syncInputs = true): void {
+  if (!linkEditor) {
+    return;
+  }
+  activeLink = target;
+  activeRegion = null;
+  linkEditor.hidden = false;
+  if (toolbar) {
+    toolbar.hidden = true;
+  }
+  if (syncInputs && linkLabelInput) {
+    linkLabelInput.value = target.textContent?.trim() ?? '';
+  }
+  if (syncInputs && linkHrefInput) {
+    linkHrefInput.value = target.getAttribute('href') ?? '';
+  }
+  positionFloatingSurface(linkEditor, target);
+}
+
+function positionFloatingSurface(surface: HTMLElement, target: HTMLElement): void {
   requestAnimationFrame(() => {
-    if (!toolbar || !activeRegion) {
-      return;
-    }
-    const targetRect = activeRegion.getBoundingClientRect();
-    const toolbarRect = toolbar.getBoundingClientRect();
+    const targetRect = target.getBoundingClientRect();
+    const surfaceRect = surface.getBoundingClientRect();
     const position = calculateFloatingToolbarPosition({
       targetRect,
       toolbarSize: {
-        width: toolbarRect.width,
-        height: toolbarRect.height,
+        width: surfaceRect.width,
+        height: surfaceRect.height,
       },
       viewportSize: {
         width: window.innerWidth,
         height: window.innerHeight,
       },
     });
-    toolbar.style.left = `${position.left}px`;
-    toolbar.style.top = `${position.top}px`;
-    toolbar.dataset.placement = position.placement;
+    surface.style.left = `${position.left}px`;
+    surface.style.top = `${position.top}px`;
+    surface.dataset.placement = position.placement;
   });
 }
 
@@ -118,6 +147,13 @@ function applyRegions(regions: PageRegionResponse['regions']): void {
       const formattedTarget = setRegionFormat(target, format.elementType, format.size, false);
       formattedTarget.innerHTML = region.value;
     }
+    const link = findEditableLink(region.regionId);
+    if (link) {
+      link.textContent = region.value;
+      if (typeof region.href === 'string') {
+        link.setAttribute('href', region.href);
+      }
+    }
   }
 }
 
@@ -148,6 +184,32 @@ async function saveRegion(region: HTMLElement): Promise<void> {
   }
 }
 
+async function saveLink(link: HTMLAnchorElement): Promise<void> {
+  const regionId = getLinkRegionId(link);
+  if (!regionId) {
+    return;
+  }
+
+  const response = await fetch('/api/page-regions/draft', {
+    method: 'POST',
+    headers: {
+      'content-type': 'application/json',
+    },
+    body: JSON.stringify({
+      siteId,
+      pageId,
+      regionId,
+      value: link.textContent?.trim() ?? '',
+      href: link.getAttribute('href') ?? '',
+      updatedBy: 'owner',
+    }),
+  });
+
+  if (!response.ok) {
+    throw new Error('Unable to save link draft');
+  }
+}
+
 function scheduleSave(region: HTMLElement): void {
   const regionId = region.dataset.editable;
   if (!regionId) {
@@ -159,6 +221,24 @@ function scheduleSave(region: HTMLElement): void {
     regionId,
     window.setTimeout(() => {
       saveRegion(region)
+        .then(() => setDraftState('Draft changes'))
+        .catch(setErrorState);
+    }, 300),
+  );
+}
+
+function scheduleLinkSave(link: HTMLAnchorElement): void {
+  const regionId = getLinkRegionId(link);
+  if (!regionId) {
+    return;
+  }
+  const timerKey = `link:${regionId}`;
+  window.clearTimeout(saveTimers.get(timerKey));
+  setDraftState('Saving draft');
+  saveTimers.set(
+    timerKey,
+    window.setTimeout(() => {
+      saveLink(link)
         .then(() => setDraftState('Draft changes'))
         .catch(setErrorState);
     }, 300),
@@ -184,6 +264,28 @@ async function publishDrafts(): Promise<void> {
     return;
   }
   setPublishedState();
+}
+
+function getLinkRegionId(link: HTMLAnchorElement): string {
+  return link.dataset.editableLink ?? '';
+}
+
+function findEditableLink(regionId: string): HTMLAnchorElement | null {
+  return document.querySelector<HTMLAnchorElement>(`[data-editable-link="${CSS.escape(regionId)}"]`);
+}
+
+function updateActiveLinkFromInputs(): void {
+  if (!activeLink) {
+    return;
+  }
+  if (linkLabelInput) {
+    activeLink.textContent = linkLabelInput.value;
+  }
+  if (linkHrefInput) {
+    activeLink.setAttribute('href', linkHrefInput.value);
+  }
+  positionLinkEditor(activeLink, false);
+  scheduleLinkSave(activeLink);
 }
 
 function getRegionElementType(region: HTMLElement): PageRegionElementType {
@@ -335,9 +437,13 @@ if (editModeEnabled) {
     void publishDrafts();
   });
 
+  linkLabelInput?.addEventListener('input', updateActiveLinkFromInputs);
+  linkHrefInput?.addEventListener('input', updateActiveLinkFromInputs);
+
   document.querySelectorAll<HTMLAnchorElement>('[data-editable-link]').forEach((link) => {
     link.addEventListener('click', (event) => {
       event.preventDefault();
+      positionLinkEditor(link);
     });
   });
 
@@ -345,11 +451,17 @@ if (editModeEnabled) {
     if (activeRegion && toolbar && !toolbar.hidden) {
       positionToolbar(activeRegion);
     }
+    if (activeLink && linkEditor && !linkEditor.hidden) {
+      positionLinkEditor(activeLink);
+    }
   }, { passive: true });
 
   window.addEventListener('resize', () => {
     if (activeRegion && toolbar && !toolbar.hidden) {
       positionToolbar(activeRegion);
+    }
+    if (activeLink && linkEditor && !linkEditor.hidden) {
+      positionLinkEditor(activeLink);
     }
   });
 }

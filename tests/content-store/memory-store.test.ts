@@ -55,18 +55,35 @@ describe('MemoryContentStore', () => {
       size: 'small',
       updatedBy: 'owner',
     });
+    await store.savePageRegionDraft({
+      siteId: 'joes-plumbing',
+      pageId: 'home',
+      regionId: 'home.primaryCta',
+      value: 'Book now',
+      href: '/joe-plumbing/services',
+      updatedBy: 'owner',
+    });
 
     expect(await store.listPublishedPageRegions('joes-plumbing', 'home')).toEqual([]);
-    expect(await store.listPageRegionDrafts('joes-plumbing', 'home')).toMatchObject([
-      {
-        pageId: 'home',
-        regionId: 'home.heroHeading',
-        value: 'Draft headline',
-        elementType: 'h1',
-        size: 'small',
-        status: 'draft',
-      },
-    ]);
+    expect(await store.listPageRegionDrafts('joes-plumbing', 'home')).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          pageId: 'home',
+          regionId: 'home.heroHeading',
+          value: 'Draft headline',
+          elementType: 'h1',
+          size: 'small',
+          status: 'draft',
+        }),
+        expect.objectContaining({
+          pageId: 'home',
+          regionId: 'home.primaryCta',
+          value: 'Book now',
+          href: '/joe-plumbing/services',
+          status: 'draft',
+        }),
+      ]),
+    );
   });
 
   it('publishes all current page region drafts for a page', async () => {

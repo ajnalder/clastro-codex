@@ -25,6 +25,7 @@ export interface PageRegionContent {
   pageId: string;
   regionId: string;
   value: string;
+  href?: string;
   elementType: PageRegionElementType;
   size: PageRegionSize;
   status: ContentStatus;
@@ -46,6 +47,7 @@ export interface SavePageRegionDraftInput {
   pageId: string;
   regionId: string;
   value: string;
+  href?: string;
   elementType?: PageRegionElementType;
   size?: PageRegionSize;
   updatedBy: string;
