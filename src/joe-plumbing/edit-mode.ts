@@ -4,6 +4,7 @@ import {
   type PageRegionElementType,
   type PageRegionSize,
 } from '../content-store/page-region-format';
+import { calculateFloatingToolbarPosition } from './toolbar-position';
 
 const root = document.querySelector<HTMLElement>('[data-joe-edit-root]');
 const toolbar = document.querySelector<HTMLElement>('[data-joe-toolbar]');
@@ -60,6 +61,27 @@ function positionToolbar(target: HTMLElement): void {
   activeRegion = target;
   toolbar.hidden = false;
   updateToolbarState(target);
+  requestAnimationFrame(() => {
+    if (!toolbar || !activeRegion) {
+      return;
+    }
+    const targetRect = activeRegion.getBoundingClientRect();
+    const toolbarRect = toolbar.getBoundingClientRect();
+    const position = calculateFloatingToolbarPosition({
+      targetRect,
+      toolbarSize: {
+        width: toolbarRect.width,
+        height: toolbarRect.height,
+      },
+      viewportSize: {
+        width: window.innerWidth,
+        height: window.innerHeight,
+      },
+    });
+    toolbar.style.left = `${position.left}px`;
+    toolbar.style.top = `${position.top}px`;
+    toolbar.dataset.placement = position.placement;
+  });
 }
 
 async function loadDrafts(): Promise<void> {
@@ -231,6 +253,7 @@ function setRegionFormat(
 
   if (shouldSave) {
     formattedRegion.focus();
+    positionToolbar(formattedRegion);
     scheduleSave(formattedRegion);
   }
 
@@ -316,6 +339,18 @@ if (editModeEnabled) {
     link.addEventListener('click', (event) => {
       event.preventDefault();
     });
+  });
+
+  window.addEventListener('scroll', () => {
+    if (activeRegion && toolbar && !toolbar.hidden) {
+      positionToolbar(activeRegion);
+    }
+  }, { passive: true });
+
+  window.addEventListener('resize', () => {
+    if (activeRegion && toolbar && !toolbar.hidden) {
+      positionToolbar(activeRegion);
+    }
   });
 }
 

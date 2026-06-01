@@ -406,20 +406,45 @@ body.joe-site a {
 }
 
 .joe-edit-toolbar {
-  position: sticky;
-  top: 46px;
+  position: fixed;
+  top: 74px;
+  left: 16px;
   z-index: 11;
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
   align-items: center;
   width: min(940px, calc(100vw - 32px));
-  margin: 10px auto 0;
+  max-width: calc(100vw - 32px);
+  margin: 0;
   padding: 8px;
   border: 1px solid #cad5ce;
   border-radius: 10px;
   background: var(--joe-panel);
   box-shadow: 0 16px 42px rgba(32, 39, 33, 0.15);
+  transition: top 140ms ease, left 140ms ease;
+  will-change: top, left;
+}
+
+.joe-edit-toolbar::after {
+  position: absolute;
+  left: 50%;
+  width: 12px;
+  height: 12px;
+  border-right: 1px solid #cad5ce;
+  border-bottom: 1px solid #cad5ce;
+  background: var(--joe-panel);
+  content: "";
+  transform: translateX(-50%) rotate(45deg);
+}
+
+.joe-edit-toolbar[data-placement='above']::after {
+  bottom: -7px;
+}
+
+.joe-edit-toolbar[data-placement='below']::after {
+  top: -7px;
+  transform: translateX(-50%) rotate(225deg);
 }
 
 .joe-toolbar-select {
