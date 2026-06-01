@@ -1,4 +1,4 @@
-export const pageRegionElementTypes = ['p', 'h1', 'h2', 'h3', 'blockquote'] as const;
+export const pageRegionElementTypes = ['p', 'h1', 'h2', 'h3', 'blockquote', 'span', 'strong'] as const;
 export const pageRegionSizes = ['default', 'small', 'large'] as const;
 
 export type PageRegionElementType = (typeof pageRegionElementTypes)[number];

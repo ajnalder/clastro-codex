@@ -9,6 +9,17 @@ describe('normalizePageRegionFormat', () => {
     });
   });
 
+  it('keeps inline text elements used by compact page regions', () => {
+    expect(normalizePageRegionFormat({ elementType: 'strong', size: 'default' })).toEqual({
+      elementType: 'strong',
+      size: 'default',
+    });
+    expect(normalizePageRegionFormat({ elementType: 'span', size: 'default' })).toEqual({
+      elementType: 'span',
+      size: 'default',
+    });
+  });
+
   it('falls back to safe defaults for unknown editor values', () => {
     expect(normalizePageRegionFormat({ elementType: 'script', size: 'tiny' })).toEqual({
       elementType: 'p',

@@ -41,15 +41,38 @@ const featuredPost = joeBlogPosts[0];
           </JoeEditable>
           <div class="joe-hero-actions">
             <a class="joe-button" href={cta.href} data-editable-link="home.primaryCta">{cta.label}</a>
-            <span class="joe-tag">Same-day emergency slots</span>
+            <JoeEditable as="span" id="home.heroAvailability" editMode={editMode} class="joe-tag">
+              {getPageString(page, 'heroAvailability')}
+            </JoeEditable>
           </div>
         </div>
         <div class="joe-hero-media">
           <img src="/joe-plumbing/van.svg" alt="Joe's Plumbing work van beside pipework" width="900" height="620" />
           <div class="joe-stat-strip" aria-label="Joe's Plumbing proof points">
-            <div><strong>47 min</strong><span>median response</span></div>
-            <div><strong>312</strong><span>jobs this year</span></div>
-            <div><strong>4.8</strong><span>review average</span></div>
+            <div>
+              <JoeEditable as="strong" id="home.statResponseValue" editMode={editMode}>
+                {getPageString(page, 'statResponseValue')}
+              </JoeEditable>
+              <JoeEditable as="span" id="home.statResponseLabel" editMode={editMode}>
+                {getPageString(page, 'statResponseLabel')}
+              </JoeEditable>
+            </div>
+            <div>
+              <JoeEditable as="strong" id="home.statJobsValue" editMode={editMode}>
+                {getPageString(page, 'statJobsValue')}
+              </JoeEditable>
+              <JoeEditable as="span" id="home.statJobsLabel" editMode={editMode}>
+                {getPageString(page, 'statJobsLabel')}
+              </JoeEditable>
+            </div>
+            <div>
+              <JoeEditable as="strong" id="home.statReviewsValue" editMode={editMode}>
+                {getPageString(page, 'statReviewsValue')}
+              </JoeEditable>
+              <JoeEditable as="span" id="home.statReviewsLabel" editMode={editMode}>
+                {getPageString(page, 'statReviewsLabel')}
+              </JoeEditable>
+            </div>
           </div>
         </div>
       </div>
@@ -80,7 +103,9 @@ const featuredPost = joeBlogPosts[0];
     <section class="joe-band">
       <div class="joe-section-inner joe-split">
         <div>
-          <p class="joe-kicker">Latest advice</p>
+          <JoeEditable as="p" id="home.latestAdviceKicker" editMode={editMode} class="joe-kicker">
+            {getPageString(page, 'latestAdviceKicker')}
+          </JoeEditable>
           <h2>{getCollectionString(featuredPost, 'title')}</h2>
           <p class="joe-copy">{getCollectionString(featuredPost, 'excerpt')}</p>
         </div>
