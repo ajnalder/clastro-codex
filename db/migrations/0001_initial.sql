@@ -44,11 +44,14 @@ CREATE TABLE page_region_values (
 CREATE TABLE media_assets (
   site_id TEXT NOT NULL,
   asset_id TEXT NOT NULL,
-  r2_key TEXT NOT NULL,
   filename TEXT NOT NULL,
   content_type TEXT NOT NULL,
-  alt_text TEXT,
-  caption TEXT,
+  width INTEGER NOT NULL,
+  height INTEGER NOT NULL,
+  variants_json TEXT NOT NULL,
+  alt_text TEXT NOT NULL,
+  caption TEXT NOT NULL,
   created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TEXT NOT NULL,
   PRIMARY KEY (site_id, asset_id)
 );

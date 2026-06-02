@@ -1,4 +1,5 @@
 import type { PageRegionElementType, PageRegionSize } from './page-region-format';
+import type { MediaAsset, SaveMediaAssetInput, UpdateMediaAssetInput } from '../media/types';
 
 export type ContentStatus = 'draft' | 'published';
 
@@ -63,4 +64,7 @@ export interface ContentStore {
   listPageRegionDrafts(siteId: string, pageId: string): Promise<PageRegionContent[]>;
   listPublishedPageRegions(siteId: string, pageId: string): Promise<PageRegionContent[]>;
   publishPageRegionDrafts(siteId: string, pageId: string, updatedBy: string): Promise<PageRegionContent[]>;
+  saveMediaAsset(input: SaveMediaAssetInput): Promise<MediaAsset>;
+  listMediaAssets(siteId: string): Promise<MediaAsset[]>;
+  updateMediaAssetMetadata(input: UpdateMediaAssetInput): Promise<MediaAsset>;
 }

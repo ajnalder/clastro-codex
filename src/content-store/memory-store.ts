@@ -1,3 +1,4 @@
+import type { MediaAsset, SaveMediaAssetInput, UpdateMediaAssetInput } from '../media/types';
 import type { ContentItem, ContentStore, PageRegionContent, SaveDraftInput, SavePageRegionDraftInput } from './types';
 import { normalizePageRegionFormat } from './page-region-format';
 
@@ -9,6 +10,10 @@ function pageRegionKey(siteId: string, pageId: string, regionId: string): string
   return `${siteId}:${pageId}:${regionId}`;
 }
 
+function mediaKey(siteId: string, assetId: string): string {
+  return `${siteId}:${assetId}`;
+}
+
 function cloneItem(item: ContentItem): ContentItem {
   return structuredClone(item);
 }
@@ -17,11 +22,16 @@ function clonePageRegion(region: PageRegionContent): PageRegionContent {
   return structuredClone(region);
 }
 
+function cloneMediaAsset(asset: MediaAsset): MediaAsset {
+  return structuredClone(asset);
+}
+
 export class MemoryContentStore implements ContentStore {
   private drafts = new Map<string, ContentItem>();
   private published = new Map<string, ContentItem>();
   private pageRegionDrafts = new Map<string, PageRegionContent>();
   private pageRegionPublished = new Map<string, PageRegionContent>();
+  private mediaAssets = new Map<string, MediaAsset>();
 
   async saveDraft(input: SaveDraftInput): Promise<ContentItem> {
     const item: ContentItem = {
@@ -107,5 +117,42 @@ export class MemoryContentStore implements ContentStore {
     }
 
     return published.map(clonePageRegion);
+  }
+
+  async saveMediaAsset(input: SaveMediaAssetInput): Promise<MediaAsset> {
+    const now = new Date().toISOString();
+    const asset: MediaAsset = {
+      ...input,
+      assetId: input.assetId ?? crypto.randomUUID(),
+      caption: input.caption ?? '',
+      contentType: 'image/webp',
+      createdAt: now,
+      updatedAt: now,
+    };
+    this.mediaAssets.set(mediaKey(asset.siteId, asset.assetId), cloneMediaAsset(asset));
+    return cloneMediaAsset(asset);
+  }
+
+  async listMediaAssets(siteId: string): Promise<MediaAsset[]> {
+    return [...this.mediaAssets.values()]
+      .filter((asset) => asset.siteId === siteId)
+      .sort((left, right) => right.createdAt.localeCompare(left.createdAt))
+      .map(cloneMediaAsset);
+  }
+
+  async updateMediaAssetMetadata(input: UpdateMediaAssetInput): Promise<MediaAsset> {
+    const key = mediaKey(input.siteId, input.assetId);
+    const existing = this.mediaAssets.get(key);
+    if (!existing) {
+      throw new Error(`Media asset not found for ${input.siteId}/${input.assetId}`);
+    }
+    const updated: MediaAsset = {
+      ...existing,
+      altText: input.altText,
+      caption: input.caption,
+      updatedAt: new Date().toISOString(),
+    };
+    this.mediaAssets.set(key, cloneMediaAsset(updated));
+    return cloneMediaAsset(updated);
   }
 }

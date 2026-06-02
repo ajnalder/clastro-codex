@@ -45,6 +45,34 @@ class FakeD1Statement {
       return;
     }
 
+    if (this.sql.includes('INSERT OR REPLACE INTO media_assets')) {
+      const [siteId, assetId, filename, width, height, variantsJson, altText, caption, createdAt, updatedAt] = this.bindings;
+      this.rows.set(`media:${siteId}:${assetId}`, {
+        site_id: siteId,
+        asset_id: assetId,
+        filename,
+        content_type: 'image/webp',
+        width,
+        height,
+        variants_json: variantsJson,
+        alt_text: altText,
+        caption,
+        created_at: createdAt,
+        updated_at: updatedAt,
+      });
+      return;
+    }
+
+    if (this.sql.includes('UPDATE media_assets')) {
+      const [altText, caption, updatedAt, siteId, assetId] = this.bindings;
+      const key = `media:${siteId}:${assetId}`;
+      const existing = this.rows.get(key);
+      if (existing) {
+        this.rows.set(key, { ...existing, alt_text: altText, caption, updated_at: updatedAt });
+      }
+      return;
+    }
+
     if (!this.sql.includes('INSERT OR REPLACE INTO content_items')) {
       throw new Error(`Unsupported run SQL: ${this.sql}`);
     }
@@ -69,6 +97,15 @@ class FakeD1Statement {
   }
 
   async all(): Promise<{ results: StoredRow[] }> {
+    if (this.sql.includes('FROM media_assets')) {
+      const [siteId] = this.bindings;
+      return {
+        results: [...this.rows.values()]
+          .filter((row) => row.site_id === siteId && row.asset_id)
+          .sort((left, right) => String(right.created_at).localeCompare(String(left.created_at))),
+      };
+    }
+
     if (this.sql.includes('FROM page_region_values')) {
       const [siteId, pageId, status] = this.bindings;
       return {
@@ -178,5 +215,58 @@ describe('D1ContentStore', () => {
       ]),
     );
     expect(await store.listPageRegionDrafts('joes-plumbing', 'home')).toEqual([]);
+  });
+
+  it('saves, lists, and updates media asset metadata', async () => {
+    const store = new D1ContentStore(new FakeD1Database() as unknown as D1Database);
+    const variants = {
+      thumb: {
+        r2Key: 'thumb.webp',
+        url: '/api/media/asset-1/thumb',
+        width: 360,
+        height: 240,
+        bytes: 12000,
+        contentType: 'image/webp' as const,
+      },
+      card: {
+        r2Key: 'card.webp',
+        url: '/api/media/asset-1/card',
+        width: 900,
+        height: 600,
+        bytes: 48000,
+        contentType: 'image/webp' as const,
+      },
+      large: {
+        r2Key: 'large.webp',
+        url: '/api/media/asset-1/large',
+        width: 1200,
+        height: 800,
+        bytes: 92000,
+        contentType: 'image/webp' as const,
+      },
+    };
+
+    await store.saveMediaAsset({
+      siteId: 'joes-plumbing',
+      assetId: 'asset-1',
+      filename: 'van.webp',
+      altText: "Joe's Plumbing van",
+      caption: 'Service van',
+      width: 1200,
+      height: 800,
+      variants,
+    });
+
+    const updated = await store.updateMediaAssetMetadata({
+      siteId: 'joes-plumbing',
+      assetId: 'asset-1',
+      altText: 'Updated alt',
+      caption: 'Updated caption',
+    });
+
+    expect(updated.altText).toBe('Updated alt');
+    expect(await store.listMediaAssets('joes-plumbing')).toEqual([
+      expect.objectContaining({ assetId: 'asset-1', caption: 'Updated caption', variants }),
+    ]);
   });
 });

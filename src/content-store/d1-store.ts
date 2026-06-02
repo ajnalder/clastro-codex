@@ -7,6 +7,7 @@ import type {
   SaveDraftInput,
   SavePageRegionDraftInput,
 } from './types';
+import type { MediaAsset, MediaVariantManifest, SaveMediaAssetInput, UpdateMediaAssetInput } from '../media/types';
 import { normalizePageRegionFormat } from './page-region-format';
 
 function now(): string {
@@ -49,6 +50,22 @@ function rowToPageRegion(row: Record<string, unknown>): PageRegionContent {
     elementType: format.elementType,
     size: format.size,
     updatedBy: String(row.updated_by),
+    updatedAt: String(row.updated_at),
+  };
+}
+
+function rowToMediaAsset(row: Record<string, unknown>): MediaAsset {
+  return {
+    siteId: String(row.site_id),
+    assetId: String(row.asset_id),
+    filename: String(row.filename),
+    contentType: 'image/webp',
+    width: Number(row.width),
+    height: Number(row.height),
+    variants: JSON.parse(String(row.variants_json)) as MediaVariantManifest,
+    altText: String(row.alt_text),
+    caption: String(row.caption),
+    createdAt: String(row.created_at),
     updatedAt: String(row.updated_at),
   };
 }
@@ -193,6 +210,61 @@ export class D1ContentStore implements ContentStore {
       .run();
 
     return this.listPublishedPageRegions(siteId, pageId);
+  }
+
+  async saveMediaAsset(input: SaveMediaAssetInput): Promise<MediaAsset> {
+    const createdAt = now();
+    const assetId = input.assetId ?? crypto.randomUUID();
+    const caption = input.caption ?? '';
+    await this.db
+      .prepare(
+        `INSERT OR REPLACE INTO media_assets
+          (site_id, asset_id, filename, content_type, width, height, variants_json, alt_text, caption, created_at, updated_at)
+        VALUES (?, ?, ?, 'image/webp', ?, ?, ?, ?, ?, ?, ?)`,
+      )
+      .bind(
+        input.siteId,
+        assetId,
+        input.filename,
+        input.width,
+        input.height,
+        JSON.stringify(input.variants),
+        input.altText,
+        caption,
+        createdAt,
+        createdAt,
+      )
+      .run();
+
+    return {
+      ...input,
+      assetId,
+      caption,
+      contentType: 'image/webp',
+      createdAt,
+      updatedAt: createdAt,
+    };
+  }
+
+  async listMediaAssets(siteId: string): Promise<MediaAsset[]> {
+    const result = await this.db
+      .prepare(`SELECT * FROM media_assets WHERE site_id = ? ORDER BY created_at DESC`)
+      .bind(siteId)
+      .all<Record<string, unknown>>();
+    return result.results.map(rowToMediaAsset);
+  }
+
+  async updateMediaAssetMetadata(input: UpdateMediaAssetInput): Promise<MediaAsset> {
+    const updatedAt = now();
+    await this.db
+      .prepare(`UPDATE media_assets SET alt_text = ?, caption = ?, updated_at = ? WHERE site_id = ? AND asset_id = ?`)
+      .bind(input.altText, input.caption, updatedAt, input.siteId, input.assetId)
+      .run();
+    const asset = (await this.listMediaAssets(input.siteId)).find((candidate) => candidate.assetId === input.assetId);
+    if (!asset) {
+      throw new Error(`Media asset not found for ${input.siteId}/${input.assetId}`);
+    }
+    return asset;
   }
 
   private async getItem(
