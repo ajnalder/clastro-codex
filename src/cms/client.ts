@@ -1,3 +1,4 @@
+import { createRichTextImageMarker, insertRichTextImageMarker } from './media-field-values';
 import { optimizeImageFile } from '../media/browser-optimizer';
 import type { MediaAsset } from '../media/types';
 
@@ -12,6 +13,12 @@ const mediaUploadButton = document.querySelector<HTMLButtonElement>('[data-media
 const mediaAltInput = document.querySelector<HTMLInputElement>('[data-media-alt]');
 const mediaCaptionInput = document.querySelector<HTMLInputElement>('[data-media-caption]');
 const mediaMetadataTimers = new Map<string, number>();
+const mediaLibrary = new Map<string, MediaAsset>();
+const mediaLibraryJson = root?.dataset.mediaLibrary ?? '[]';
+
+for (const asset of JSON.parse(mediaLibraryJson) as MediaAsset[]) {
+  mediaLibrary.set(asset.assetId, asset);
+}
 
 function formatBytes(bytes: number): string {
   if (bytes < 1000) {
@@ -37,6 +44,29 @@ function setStatus(label: string, helper: string, dirty: boolean): void {
     publishButton.disabled = !dirty;
   }
   root?.setAttribute('data-editor-dirty', String(dirty));
+}
+
+async function uploadMediaFile(file: File, altText: string, caption = ''): Promise<MediaAsset> {
+  const optimized = await optimizeImageFile(file);
+  const form = new FormData();
+  form.set('siteId', 'joes-plumbing');
+  form.set('filename', optimized.filename);
+  form.set('altText', altText);
+  form.set('caption', caption);
+  form.set('width', String(optimized.width));
+  form.set('height', String(optimized.height));
+  form.set('bytesByVariant', JSON.stringify(optimized.bytesByVariant));
+  form.set('thumb', optimized.blobs.thumb);
+  form.set('card', optimized.blobs.card);
+  form.set('large', optimized.blobs.large);
+
+  const response = await fetch('/api/media', { method: 'POST', body: form });
+  if (!response.ok) {
+    throw new Error(await response.text());
+  }
+  const asset = (await response.json()) as MediaAsset;
+  mediaLibrary.set(asset.assetId, asset);
+  return asset;
 }
 
 function createMediaField(labelText: string, value: string, dataAttribute: string, assetId: string): HTMLLabelElement {
@@ -141,10 +171,314 @@ function appendMediaAsset(asset: MediaAsset): void {
 
 editorForm?.addEventListener('input', () => {
   setStatus('Draft changes', 'Autosaved locally. Publish when this content should go live.', true);
+  scheduleItemDraftSave();
 });
 
 publishButton?.addEventListener('click', () => {
   setStatus('Published', 'Published in this editor session. A production publish will trigger an Astro rebuild.', false);
+});
+
+function parseFieldValue(field: HTMLInputElement | HTMLTextAreaElement): unknown {
+  if (field instanceof HTMLInputElement && field.type === 'hidden') {
+    if (!field.value) {
+      return null;
+    }
+    try {
+      return JSON.parse(field.value);
+    } catch {
+      return field.value;
+    }
+  }
+  return field.value;
+}
+
+function serializeCollectionValues(): Record<string, unknown> {
+  const values: Record<string, unknown> = {};
+  document.querySelectorAll<HTMLInputElement | HTMLTextAreaElement>('[data-field]').forEach((field) => {
+    values[field.dataset.field ?? field.name] = parseFieldValue(field);
+  });
+  return values;
+}
+
+function serializeExtraSections(): Array<{ type: string; values: Record<string, unknown> }> {
+  const sections = new Map<string, Record<string, unknown>>();
+  document.querySelectorAll<HTMLInputElement | HTMLTextAreaElement>('[data-extra-section][data-extra-field]').forEach((field) => {
+    const sectionId = field.dataset.extraSection;
+    const fieldId = field.dataset.extraField;
+    if (!sectionId || !fieldId) return;
+    const values = sections.get(sectionId) ?? {};
+    values[fieldId] = parseFieldValue(field);
+    sections.set(sectionId, values);
+  });
+  return [...sections.entries()].map(([type, values]) => ({ type, values }));
+}
+
+function getItemContext(): { collectionId: string; itemId: string } | null {
+  const form = document.querySelector<HTMLFormElement>('[data-editor-form][data-collection-id][data-item-id]');
+  if (!form?.dataset.collectionId || !form.dataset.itemId) return null;
+  return { collectionId: form.dataset.collectionId, itemId: form.dataset.itemId };
+}
+
+let itemSaveTimer = 0;
+
+function scheduleItemDraftSave(): void {
+  const context = getItemContext();
+  if (!context) return;
+  window.clearTimeout(itemSaveTimer);
+  setStatus('Saving draft', 'Autosaving this collection item.', true);
+  itemSaveTimer = window.setTimeout(() => {
+    void fetch('/api/items/draft', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        siteId: 'joes-plumbing',
+        collectionId: context.collectionId,
+        itemId: context.itemId,
+        values: serializeCollectionValues(),
+        extraSections: serializeExtraSections(),
+        updatedBy: 'owner',
+      }),
+    }).then((response) => {
+      if (!response.ok) throw new Error('Unable to save draft item');
+      setStatus('Draft saved', 'Collection item draft has been autosaved.', false);
+    }).catch((error: unknown) => {
+      setStatus('Save failed', error instanceof Error ? error.message : 'Unable to save draft item.', true);
+    });
+  }, 400);
+}
+
+function updateImageFieldPreview(fieldId: string, assetId: string | null): void {
+  const preview = document.querySelector<HTMLElement>(`[data-image-preview="${CSS.escape(fieldId)}"]`);
+  if (!preview) return;
+
+  preview.innerHTML = '';
+  const asset = assetId ? mediaLibrary.get(assetId) : null;
+  if (!asset) {
+    const empty = document.createElement('strong');
+    empty.textContent = 'No image selected';
+    preview.appendChild(empty);
+    return;
+  }
+
+  const image = document.createElement('img');
+  image.src = asset.variants.thumb.url;
+  image.alt = asset.altText;
+  image.width = asset.variants.thumb.width;
+  image.height = asset.variants.thumb.height;
+
+  const caption = document.createElement('div');
+  caption.className = 'cms-media-field-caption';
+  const filename = document.createElement('strong');
+  const altText = document.createElement('small');
+  filename.textContent = asset.filename;
+  altText.textContent = asset.altText;
+  caption.appendChild(filename);
+  caption.appendChild(altText);
+
+  preview.appendChild(image);
+  preview.appendChild(caption);
+}
+
+function setImageFieldValue(fieldId: string, assetId: string | null): void {
+  const input = document.querySelector<HTMLInputElement>(`[data-media-image-field="${CSS.escape(fieldId)}"]`);
+  if (!input) return;
+  input.value = assetId ? JSON.stringify({ assetId, role: 'hero' }) : '';
+  updateImageFieldPreview(fieldId, assetId);
+  scheduleItemDraftSave();
+}
+
+document.addEventListener('click', (event) => {
+  const target = event.target as HTMLElement | null;
+  const applyButton = target?.closest<HTMLButtonElement>('[data-media-field-apply]');
+  const removeButton = target?.closest<HTMLButtonElement>('[data-media-field-remove]');
+  if (applyButton?.dataset.mediaFieldApply) {
+    const fieldId = applyButton.dataset.mediaFieldApply;
+    const select = document.querySelector(`[data-media-select="${CSS.escape(fieldId)}"]`) as HTMLSelectElement | null;
+    setImageFieldValue(fieldId, select?.value || null);
+  }
+  if (removeButton?.dataset.mediaFieldRemove) {
+    setImageFieldValue(removeButton.dataset.mediaFieldRemove, null);
+  }
+});
+
+document.addEventListener('click', (event) => {
+  const button = (event.target as HTMLElement | null)?.closest<HTMLButtonElement>('[data-media-field-upload-button]');
+  if (!button?.dataset.mediaFieldUploadButton) return;
+  const fieldId = button.dataset.mediaFieldUploadButton;
+  const input = document.querySelector<HTMLInputElement>(`[data-media-field-upload="${CSS.escape(fieldId)}"]`);
+  const file = input?.files?.[0];
+  if (!file) {
+    setStatus('Choose an image', 'Select an image for this field first.', true);
+    return;
+  }
+  void uploadMediaFile(file, file.name.replace(/\.[^.]+$/, '').replace(/[-_]+/g, ' '))
+    .then((asset) => {
+      setImageFieldValue(fieldId, asset.assetId);
+      setStatus('Image selected', 'Uploaded image is saved in Media and selected for this field.', false);
+    })
+    .catch((error: unknown) => {
+      setStatus('Upload failed', error instanceof Error ? error.message : 'Unable to upload image.', true);
+    });
+});
+
+function getGalleryValue(fieldId: string): { heroAssetId: string | null; assetIds: string[] } {
+  const input = document.querySelector<HTMLInputElement>(`[data-media-gallery-field="${CSS.escape(fieldId)}"]`);
+  if (!input?.value) return { heroAssetId: null, assetIds: [] };
+  try {
+    const parsed = JSON.parse(input.value) as { heroAssetId?: string | null; assetIds?: string[] };
+    const assetIds = Array.isArray(parsed.assetIds) ? [...new Set(parsed.assetIds.filter(Boolean))] : [];
+    return {
+      heroAssetId: parsed.heroAssetId && assetIds.includes(parsed.heroAssetId) ? parsed.heroAssetId : assetIds[0] ?? null,
+      assetIds,
+    };
+  } catch {
+    return { heroAssetId: null, assetIds: [] };
+  }
+}
+
+function renderGalleryPreview(fieldId: string, value: { heroAssetId: string | null; assetIds: string[] }): void {
+  const preview = document.querySelector<HTMLElement>(`[data-gallery-preview="${CSS.escape(fieldId)}"]`);
+  if (!preview) return;
+
+  preview.innerHTML = '';
+  for (const assetId of value.assetIds) {
+    const asset = mediaLibrary.get(assetId);
+    if (!asset) continue;
+    const card = document.createElement('article');
+    card.className = `cms-gallery-item${assetId === value.heroAssetId ? ' is-hero' : ''}`;
+    card.dataset.galleryAsset = assetId;
+
+    const image = document.createElement('img');
+    image.src = asset.variants.thumb.url;
+    image.alt = asset.altText;
+    image.width = asset.variants.thumb.width;
+    image.height = asset.variants.thumb.height;
+
+    const label = document.createElement('strong');
+    label.textContent = asset.filename;
+
+    card.appendChild(image);
+    card.appendChild(label);
+    preview.appendChild(card);
+  }
+}
+
+function setGalleryValue(fieldId: string, value: { heroAssetId: string | null; assetIds: string[] }): void {
+  const input = document.querySelector<HTMLInputElement>(`[data-media-gallery-field="${CSS.escape(fieldId)}"]`);
+  if (!input) return;
+  const assetIds = [...new Set(value.assetIds.filter(Boolean))];
+  const heroAssetId = value.heroAssetId && assetIds.includes(value.heroAssetId) ? value.heroAssetId : assetIds[0] ?? null;
+  const nextValue = { heroAssetId, assetIds };
+  input.value = JSON.stringify(nextValue);
+  renderGalleryPreview(fieldId, nextValue);
+  scheduleItemDraftSave();
+}
+
+function getSelectedGalleryAssetId(fieldId: string): string {
+  const select = document.querySelector(`[data-gallery-select="${CSS.escape(fieldId)}"]`) as HTMLSelectElement | null;
+  return select?.value ?? '';
+}
+
+function addAssetToGallery(fieldId: string, assetId: string): void {
+  const current = getGalleryValue(fieldId);
+  if (!assetId) {
+    setStatus('Choose an image', 'Select a media asset before adding it to this gallery.', true);
+    return;
+  }
+  if (current.assetIds.includes(assetId)) {
+    setStatus('Already in gallery', 'That image is already in this gallery.', false);
+    return;
+  }
+  const assetIds = [...current.assetIds, assetId];
+  setGalleryValue(fieldId, {
+    heroAssetId: current.heroAssetId ?? assetId,
+    assetIds,
+  });
+}
+
+function moveAssetInGallery(fieldId: string, assetId: string, direction: -1 | 1): void {
+  const current = getGalleryValue(fieldId);
+  const index = current.assetIds.indexOf(assetId);
+  const nextIndex = index + direction;
+  if (index < 0 || nextIndex < 0 || nextIndex >= current.assetIds.length) return;
+  const assetIds = [...current.assetIds];
+  const [asset] = assetIds.splice(index, 1);
+  assetIds.splice(nextIndex, 0, asset);
+  setGalleryValue(fieldId, {
+    heroAssetId: current.heroAssetId,
+    assetIds,
+  });
+}
+
+document.addEventListener('click', (event) => {
+  const target = event.target as HTMLElement | null;
+  const addButton = target?.closest<HTMLButtonElement>('[data-gallery-add]');
+  const uploadButton = target?.closest<HTMLButtonElement>('[data-gallery-upload-button]');
+  const moveUpButton = target?.closest<HTMLButtonElement>('[data-gallery-move-up]');
+  const moveDownButton = target?.closest<HTMLButtonElement>('[data-gallery-move-down]');
+  const heroButton = target?.closest<HTMLButtonElement>('[data-gallery-set-hero]');
+  const removeButton = target?.closest<HTMLButtonElement>('[data-gallery-remove]');
+
+  if (addButton?.dataset.galleryAdd) {
+    addAssetToGallery(addButton.dataset.galleryAdd, getSelectedGalleryAssetId(addButton.dataset.galleryAdd));
+  }
+  if (moveUpButton?.dataset.galleryMoveUp) {
+    moveAssetInGallery(moveUpButton.dataset.galleryMoveUp, getSelectedGalleryAssetId(moveUpButton.dataset.galleryMoveUp), -1);
+  }
+  if (moveDownButton?.dataset.galleryMoveDown) {
+    moveAssetInGallery(moveDownButton.dataset.galleryMoveDown, getSelectedGalleryAssetId(moveDownButton.dataset.galleryMoveDown), 1);
+  }
+  if (heroButton?.dataset.gallerySetHero) {
+    const current = getGalleryValue(heroButton.dataset.gallerySetHero);
+    const assetId = getSelectedGalleryAssetId(heroButton.dataset.gallerySetHero);
+    if (current.assetIds.includes(assetId)) {
+      setGalleryValue(heroButton.dataset.gallerySetHero, { ...current, heroAssetId: assetId });
+    }
+  }
+  if (removeButton?.dataset.galleryRemove) {
+    const current = getGalleryValue(removeButton.dataset.galleryRemove);
+    const assetId = getSelectedGalleryAssetId(removeButton.dataset.galleryRemove);
+    const assetIds = current.assetIds.filter((candidate) => candidate !== assetId);
+    setGalleryValue(removeButton.dataset.galleryRemove, {
+      heroAssetId: current.heroAssetId === assetId ? assetIds[0] ?? null : current.heroAssetId,
+      assetIds,
+    });
+  }
+  if (uploadButton?.dataset.galleryUploadButton) {
+    const fieldId = uploadButton.dataset.galleryUploadButton;
+    const input = document.querySelector<HTMLInputElement>(`[data-gallery-upload="${CSS.escape(fieldId)}"]`);
+    const file = input?.files?.[0];
+    if (!file) {
+      setStatus('Choose an image', 'Select an image for this gallery first.', true);
+      return;
+    }
+    void uploadMediaFile(file, file.name.replace(/\.[^.]+$/, '').replace(/[-_]+/g, ' '))
+      .then((asset) => {
+        addAssetToGallery(fieldId, asset.assetId);
+        setStatus('Gallery image added', 'Uploaded image is saved in Media and added to this gallery.', false);
+      })
+      .catch((error: unknown) => {
+        setStatus('Upload failed', error instanceof Error ? error.message : 'Unable to upload image.', true);
+      });
+  }
+});
+
+document.addEventListener('click', (event) => {
+  const button = (event.target as HTMLElement | null)?.closest<HTMLButtonElement>('[data-richtext-insert-image]');
+  if (!button?.dataset.richtextInsertImage) return;
+  const fieldId = button.dataset.richtextInsertImage;
+  const select = document.querySelector(`[data-richtext-media-select="${CSS.escape(fieldId)}"]`) as HTMLSelectElement | null;
+  const textarea = document.querySelector<HTMLTextAreaElement>(`textarea[data-field="${CSS.escape(fieldId)}"]`);
+  const assetId = select?.value;
+  if (!assetId || !textarea) {
+    setStatus('Choose an image', 'Select a media asset before inserting it into rich text.', true);
+    return;
+  }
+  const asset = mediaLibrary.get(assetId);
+  const marker = createRichTextImageMarker(assetId, asset?.caption ?? '');
+  textarea.value = insertRichTextImageMarker(textarea.value, marker, textarea.selectionStart ?? textarea.value.length);
+  scheduleItemDraftSave();
+  setStatus('Image inserted', 'The rich text field now references a media library image.', true);
 });
 
 async function uploadSelectedMedia(): Promise<void> {
@@ -159,26 +493,7 @@ async function uploadSelectedMedia(): Promise<void> {
   }
 
   setStatus('Optimizing image', 'Creating WebP website variants in the browser.', true);
-  const optimized = await optimizeImageFile(file);
-  const form = new FormData();
-  form.set('siteId', 'joes-plumbing');
-  form.set('filename', optimized.filename);
-  form.set('altText', mediaAltInput.value.trim());
-  form.set('caption', mediaCaptionInput?.value.trim() ?? '');
-  form.set('width', String(optimized.width));
-  form.set('height', String(optimized.height));
-  form.set('bytesByVariant', JSON.stringify(optimized.bytesByVariant));
-  form.set('thumb', optimized.blobs.thumb);
-  form.set('card', optimized.blobs.card);
-  form.set('large', optimized.blobs.large);
-
-  const response = await fetch('/api/media', { method: 'POST', body: form });
-  if (!response.ok) {
-    const error = await response.text();
-    setStatus('Upload failed', error, true);
-    return;
-  }
-  const asset = (await response.json()) as MediaAsset;
+  const asset = await uploadMediaFile(file, mediaAltInput.value.trim(), mediaCaptionInput?.value.trim() ?? '');
   appendMediaAsset(asset);
   if (mediaUploadInput) {
     mediaUploadInput.value = '';
