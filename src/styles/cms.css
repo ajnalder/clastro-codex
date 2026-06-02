@@ -721,20 +721,108 @@ textarea {
 
 .cms-gallery-tools,
 .cms-media-tools {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 42px 42px;
+  position: relative;
+  display: flex;
   gap: 8px;
   align-items: center;
-}
-
-.cms-gallery-tools .cms-input,
-.cms-media-tools .cms-input {
-  min-width: 0;
 }
 
 .cms-gallery-tool {
   width: 42px;
   height: 42px;
+}
+
+.cms-media-picker {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  z-index: 20;
+  display: grid;
+  width: min(360px, calc(100vw - 32px));
+  gap: 10px;
+  padding: 10px;
+  border: 1px solid var(--cms-line-strong);
+  border-radius: var(--cms-radius);
+  background: var(--cms-panel);
+  box-shadow: 0 18px 42px rgba(36, 39, 32, 0.16);
+}
+
+.cms-media-picker[hidden] {
+  display: none;
+}
+
+.cms-picker-search {
+  display: grid;
+  gap: 7px;
+}
+
+.cms-picker-search span {
+  color: var(--cms-muted);
+  font-size: 0.72rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.cms-picker-list {
+  display: grid;
+  max-height: 292px;
+  gap: 6px;
+  overflow: auto;
+}
+
+.cms-picker-option {
+  display: grid;
+  grid-template-columns: 54px minmax(0, 1fr);
+  gap: 10px;
+  align-items: center;
+  min-height: 66px;
+  padding: 6px;
+  border: 1px solid transparent;
+  border-radius: calc(var(--cms-radius) - 2px);
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  text-align: left;
+}
+
+.cms-picker-option:hover,
+.cms-picker-option:focus-visible {
+  border-color: var(--cms-line);
+  background: var(--cms-panel-soft);
+  outline: none;
+}
+
+.cms-picker-option[hidden] {
+  display: none;
+}
+
+.cms-picker-option img {
+  width: 54px;
+  height: 54px;
+  object-fit: cover;
+  border: 1px solid var(--cms-line);
+  border-radius: calc(var(--cms-radius) - 3px);
+  background: #eef2ee;
+}
+
+.cms-picker-option span,
+.cms-picker-option strong,
+.cms-picker-option small {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cms-picker-option strong {
+  font-size: 0.88rem;
+}
+
+.cms-picker-option small {
+  margin-top: 2px;
+  color: var(--cms-muted);
+  font-size: 0.78rem;
 }
 
 .cms-file-input {

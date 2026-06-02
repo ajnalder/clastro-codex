@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   addGalleryAsset,
+  createImageValueFromGalleryHero,
   createRichTextImageMarker,
   insertRichTextImageMarker,
   moveGalleryAsset,
@@ -75,6 +76,14 @@ describe('media field values', () => {
       heroAssetId: 'asset-2',
       assetIds: ['asset-1', 'asset-3', 'asset-4', 'asset-2'],
     });
+  });
+
+  it('creates an image field value from the selected gallery hero', () => {
+    expect(createImageValueFromGalleryHero({ heroAssetId: 'asset-2', assetIds: ['asset-1', 'asset-2'] })).toEqual({
+      assetId: 'asset-2',
+      role: 'hero',
+    });
+    expect(createImageValueFromGalleryHero({ heroAssetId: null, assetIds: [] })).toBeNull();
   });
 
   it('creates and inserts rich text media markers', () => {

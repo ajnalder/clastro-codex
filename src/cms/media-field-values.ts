@@ -104,6 +104,11 @@ export function setGalleryHero(value: GalleryFieldValue, assetId: string): Galle
   });
 }
 
+export function createImageValueFromGalleryHero(value: GalleryFieldValue, role = 'hero'): ImageFieldValue | null {
+  const gallery = normalizeGalleryFieldValue(value);
+  return gallery.heroAssetId ? { assetId: gallery.heroAssetId, role } : null;
+}
+
 export function createRichTextImageMarker(assetId: string, caption = ''): string {
   const captionPart = caption.trim() ? ` caption="${escapeMarkerValue(caption.trim())}"` : '';
   return `[media:image assetId="${escapeMarkerValue(assetId)}"${captionPart}]`;
