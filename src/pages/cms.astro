@@ -12,6 +12,26 @@ const selectedCollectionId = Astro.url.searchParams.get('collection') ?? undefin
 const selectedItemId = Astro.url.searchParams.get('item') ?? undefined;
 const selectedPageId = Astro.url.searchParams.get('page') ?? undefined;
 const mode = selectedView === 'media' ? 'media' : selectedView === 'pages' || selectedPageId ? 'pages' : 'collections';
+const selectedCollectionForDraft = selectedCollectionId ?? plumberContract.collections[0]?.id;
+const selectedItemForDraft =
+  selectedItemId ?? plumberItems.find((item) => item.collectionId === selectedCollectionForDraft)?.itemId;
+const draftItem = selectedCollectionForDraft && selectedItemForDraft
+  ? await demoContentStore.getDraftItem('joes-plumbing', selectedCollectionForDraft, selectedItemForDraft)
+  : null;
+const items = draftItem
+  ? plumberItems.map((item) =>
+      item.collectionId === draftItem.collectionId && item.itemId === draftItem.itemId
+        ? {
+            collectionId: draftItem.collectionId,
+            itemId: draftItem.itemId,
+            label: item.label,
+            status: draftItem.status,
+            values: draftItem.values,
+            extraSections: draftItem.extraSections,
+          }
+        : item,
+    )
+  : plumberItems;
 const storedMediaAssets = await demoContentStore.listMediaAssets('joes-plumbing');
 const storedMediaAssetIds = new Set(storedMediaAssets.map((asset) => asset.assetId));
 const mediaAssets = [
@@ -19,10 +39,10 @@ const mediaAssets = [
   ...plumberMediaAssets.filter((asset) => !storedMediaAssetIds.has(asset.assetId)),
 ];
 
-const model = createCmsViewModel(plumberContract, plumberItems, {
+const model = createCmsViewModel(plumberContract, items, {
   mode,
   selectedCollectionId,
-  selectedItemId,
+  selectedItemId: selectedItemForDraft,
   selectedPageId,
 }, plumberPages, mediaAssets);
 

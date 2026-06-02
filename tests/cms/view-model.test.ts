@@ -148,4 +148,28 @@ describe('createCmsViewModel', () => {
       expect.objectContaining({ assetId: 'joes-plumbing-van' }),
     ]);
   });
+
+  it('uses draft item values when the selected item has been autosaved', () => {
+    const draftItems = plumberItems.map((item) =>
+      item.itemId === 'shutOffWater'
+        ? {
+            ...item,
+            values: {
+              ...item.values,
+              title: 'Draft shut off water title',
+            },
+            status: 'draft' as const,
+          }
+        : item,
+    );
+    const model = createCmsViewModel(
+      plumberContract,
+      draftItems,
+      { selectedCollectionId: 'blogPosts', selectedItemId: 'shutOffWater' },
+      plumberPages,
+      plumberMediaAssets,
+    );
+
+    expect(model.activeItem?.fields.find((field) => field.id === 'title')?.value).toBe('Draft shut off water title');
+  });
 });
