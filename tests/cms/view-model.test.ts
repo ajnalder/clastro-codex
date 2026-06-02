@@ -112,4 +112,40 @@ describe('createCmsViewModel', () => {
       }),
     ]);
   });
+
+  it('resolves image fields to media previews', () => {
+    const model = createCmsViewModel(
+      plumberContract,
+      plumberItems,
+      { selectedCollectionId: 'blogPosts', selectedItemId: 'shutOffWater' },
+      plumberPages,
+      plumberMediaAssets,
+    );
+
+    const heroImage = model.activeItem?.fields.find((field) => field.id === 'heroImage');
+
+    expect(heroImage?.primitive).toBe('image');
+    expect(heroImage?.mediaAsset).toEqual(expect.objectContaining({
+      assetId: 'joes-plumbing-van',
+      altText: "Joe's Plumbing van beside pipework",
+    }));
+  });
+
+  it('resolves sortable gallery fields to ordered media previews', () => {
+    const model = createCmsViewModel(
+      plumberContract,
+      plumberItems,
+      { selectedCollectionId: 'services', selectedItemId: 'emergency' },
+      plumberPages,
+      plumberMediaAssets,
+    );
+
+    const gallery = model.activeItem?.fields.find((field) => field.id === 'gallery');
+
+    expect(gallery?.primitive).toBe('sortableGallery');
+    expect(gallery?.gallery?.heroAssetId).toBe('joes-plumbing-van');
+    expect(gallery?.gallery?.assets).toEqual([
+      expect.objectContaining({ assetId: 'joes-plumbing-van' }),
+    ]);
+  });
 });

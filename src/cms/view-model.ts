@@ -1,5 +1,11 @@
 import type { ContentContract, FieldDefinition } from '../contracts';
 import type { MediaAsset } from '../media/types';
+import {
+  normalizeGalleryFieldValue,
+  normalizeImageFieldValue,
+  type GalleryFieldValue,
+  type ImageFieldValue,
+} from './media-field-values';
 import type { CmsSampleItem, CmsSamplePage } from './sample-content';
 
 export interface CmsNavigationItem {
@@ -22,6 +28,17 @@ export interface CmsFieldView {
   primitive: string;
   required: boolean;
   value: string;
+  rawValue: unknown;
+  imageValue: ImageFieldValue | null;
+  galleryValue: GalleryFieldValue | null;
+  mediaAsset: CmsMediaAssetView | null;
+  gallery: CmsFieldGalleryView | null;
+}
+
+export interface CmsFieldGalleryView {
+  heroAssetId: string | null;
+  assets: CmsMediaAssetView[];
+  missingAssetIds: string[];
 }
 
 export interface CmsExtraSectionView {
@@ -118,24 +135,60 @@ function stringifyValue(value: unknown, field?: FieldDefinition): string {
   return typeof value === 'string' ? value : JSON.stringify(value);
 }
 
-function createFieldViews(fields: FieldDefinition[], values: Record<string, unknown>): CmsFieldView[] {
-  return fields.map((field) => ({
-    id: field.id,
-    label: field.label,
-    primitive: field.primitive,
-    required: field.required,
-    value: stringifyValue(values[field.id], field),
-  }));
+function findMediaAsset(mediaAssets: CmsMediaAssetView[], assetId: string): CmsMediaAssetView | null {
+  return mediaAssets.find((asset) => asset.assetId === assetId) ?? null;
 }
 
-function createPageView(pageDefinition: NonNullable<ContentContract['pages'][number]>, page: CmsSamplePage): CmsPageView {
+function createFieldViews(
+  fields: FieldDefinition[],
+  values: Record<string, unknown>,
+  mediaAssets: CmsMediaAssetView[],
+): CmsFieldView[] {
+  return fields.map((field) => {
+    const rawValue = values[field.id];
+    const imageValue = field.primitive === 'image' ? normalizeImageFieldValue(rawValue) : null;
+    const galleryValue =
+      field.primitive === 'imageGallery' || field.primitive === 'sortableGallery'
+        ? normalizeGalleryFieldValue(rawValue)
+        : null;
+    const galleryAssets =
+      galleryValue?.assetIds
+        .map((assetId) => findMediaAsset(mediaAssets, assetId))
+        .filter((asset): asset is CmsMediaAssetView => asset !== null) ?? [];
+
+    return {
+      id: field.id,
+      label: field.label,
+      primitive: field.primitive,
+      required: field.required,
+      value: stringifyValue(rawValue, field),
+      rawValue,
+      imageValue,
+      galleryValue,
+      mediaAsset: imageValue ? findMediaAsset(mediaAssets, imageValue.assetId) : null,
+      gallery: galleryValue
+        ? {
+            heroAssetId: galleryValue.heroAssetId,
+            assets: galleryAssets,
+            missingAssetIds: galleryValue.assetIds.filter((assetId) => !findMediaAsset(mediaAssets, assetId)),
+          }
+        : null,
+    };
+  });
+}
+
+function createPageView(
+  pageDefinition: NonNullable<ContentContract['pages'][number]>,
+  page: CmsSamplePage,
+  mediaAssets: CmsMediaAssetView[],
+): CmsPageView {
   return {
     id: page.pageId,
     label: page.label,
     path: pageDefinition.path,
     editHref: createEditHref(pageDefinition.path),
     status: page.status,
-    fields: createFieldViews(pageSettingsFields, page.values),
+    fields: createFieldViews(pageSettingsFields, page.values, mediaAssets),
   };
 }
 
@@ -217,7 +270,7 @@ export function createCmsViewModel(
       pageNavigation,
       activeCollection: null,
       activeItem: null,
-      activePage: activePageDefinition && selectedPage ? createPageView(activePageDefinition, selectedPage) : null,
+      activePage: activePageDefinition && selectedPage ? createPageView(activePageDefinition, selectedPage, mediaAssetViews) : null,
       mediaAssets: mediaAssetViews,
     };
   }
@@ -254,19 +307,19 @@ export function createCmsViewModel(
     id: selectedItem.itemId,
     label: selectedItem.label,
     status: selectedItem.status,
-    fields: createFieldViews(activeCollectionDefinition.coreFields, selectedItem.values),
+    fields: createFieldViews(activeCollectionDefinition.coreFields, selectedItem.values, mediaAssetViews),
     extraSections: selectedItem.extraSections.map((section) => {
       const definition = activeCollectionDefinition.extraSectionTypes.find((candidate) => candidate.id === section.type);
       return {
         id: section.type,
         label: definition?.label ?? section.type,
-        fields: createFieldViews(definition?.fields ?? [], section.values),
+        fields: createFieldViews(definition?.fields ?? [], section.values, mediaAssetViews),
       };
     }),
   };
   const activePage: CmsPageView | null =
     activePageDefinition && selectedPage
-      ? createPageView(activePageDefinition, selectedPage)
+      ? createPageView(activePageDefinition, selectedPage, mediaAssetViews)
       : null;
 
   return {
