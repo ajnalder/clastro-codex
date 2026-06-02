@@ -7,6 +7,7 @@ import {
   normalizeGalleryFieldValue,
   normalizeImageFieldValue,
   removeGalleryAsset,
+  reorderGalleryAsset,
   setGalleryHero,
 } from '../../src/cms/media-field-values';
 
@@ -57,6 +58,22 @@ describe('media field values', () => {
     expect(removeGalleryAsset(gallery, 'asset-1')).toEqual({
       heroAssetId: 'asset-2',
       assetIds: ['asset-2'],
+    });
+  });
+
+  it('reorders gallery assets by drag target while preserving the hero', () => {
+    const gallery = normalizeGalleryFieldValue({
+      heroAssetId: 'asset-2',
+      assetIds: ['asset-1', 'asset-2', 'asset-3', 'asset-4'],
+    });
+
+    expect(reorderGalleryAsset(gallery, 'asset-4', 'asset-2')).toEqual({
+      heroAssetId: 'asset-2',
+      assetIds: ['asset-1', 'asset-4', 'asset-2', 'asset-3'],
+    });
+    expect(reorderGalleryAsset(gallery, 'asset-2', null)).toEqual({
+      heroAssetId: 'asset-2',
+      assetIds: ['asset-1', 'asset-3', 'asset-4', 'asset-2'],
     });
   });
 

@@ -312,6 +312,15 @@ function isGalleryField(field: CmsFieldView) {
                         {field.mediaAsset ? (
                           <>
                             <img src={field.mediaAsset.previewUrl} alt={field.mediaAsset.altText} width={field.mediaAsset.previewWidth} height={field.mediaAsset.previewHeight} />
+                            <button
+                              class="cms-icon-button cms-media-field-action"
+                              type="button"
+                              title="Remove image"
+                              aria-label={`Remove ${field.mediaAsset.filename}`}
+                              data-media-field-remove={field.id}
+                            >
+                              <i data-lucide="trash-2"></i>
+                            </button>
                             <div class="cms-media-field-caption">
                               <strong>{field.mediaAsset.filename}</strong>
                               <small>{field.mediaAsset.altText}</small>
@@ -319,21 +328,26 @@ function isGalleryField(field: CmsFieldView) {
                           </>
                         ) : (
                           <strong>No image selected</strong>
-                        )}
+                      )}
                       </div>
                       <input type="hidden" name={`core-${field.id}`} value={JSON.stringify(field.imageValue)} data-field={field.id} data-media-image-field={field.id} />
-                      <select class="cms-input" data-media-select={field.id} aria-label={`Choose ${field.label}`}>
-                        <option value="">Choose from media</option>
-                        {model.mediaAssets.map((asset) => (
-                          <option value={asset.assetId} selected={asset.assetId === field.imageValue?.assetId}>{asset.filename}</option>
-                        ))}
-                      </select>
-                      <input class="cms-input" type="file" accept="image/jpeg,image/png,image/webp" data-media-field-upload={field.id} aria-label={`Upload ${field.label}`} />
-                      <div class="cms-button-row">
-                        <button class="cms-button cms-button-secondary" type="button" data-media-field-apply={field.id}>Choose</button>
-                        <button class="cms-button cms-button-secondary" type="button" data-media-field-upload-button={field.id}>Upload image</button>
-                        <button class="cms-button cms-button-secondary" type="button" data-media-field-remove={field.id}>Remove</button>
+                      <div class="cms-media-tools">
+                        <select class="cms-input" data-media-select={field.id} aria-label={`Choose ${field.label}`}>
+                          <option value="">Choose from media</option>
+                          {model.mediaAssets.map((asset) => (
+                            <option value={asset.assetId} selected={asset.assetId === field.imageValue?.assetId}>{asset.filename}</option>
+                          ))}
+                        </select>
+                        <button class="cms-icon-button cms-gallery-tool" type="button" title="Use selected image" aria-label={`Use selected image for ${field.label}`} data-media-field-apply={field.id}>
+                          <i data-lucide="plus"></i>
+                        </button>
+                        <label class="cms-icon-button cms-gallery-tool" title="Upload image">
+                          <input class="cms-file-input" type="file" accept="image/jpeg,image/png,image/webp" data-media-field-upload={field.id} aria-label={`Upload ${field.label}`} />
+                          <i data-lucide="upload"></i>
+                          <span class="cms-visually-hidden">Upload image</span>
+                        </label>
                       </div>
+                      <small class="cms-gallery-helper" data-media-file-name={field.id}>Uploaded images are optimized and selected immediately.</small>
                       <small>{field.primitive}</small>
                     </div>
                   ) : isGalleryField(field) ? (
@@ -345,27 +359,61 @@ function isGalleryField(field: CmsFieldView) {
                       <input type="hidden" name={`core-${field.id}`} value={JSON.stringify(field.galleryValue)} data-field={field.id} data-media-gallery-field={field.id} />
                       <div class="cms-gallery-grid" data-gallery-preview={field.id}>
                         {field.gallery?.assets.map((asset) => (
-                          <article class:list={['cms-gallery-item', { 'is-hero': asset.assetId === field.gallery?.heroAssetId }]} data-gallery-asset={asset.assetId}>
+                          <article
+                            class:list={['cms-gallery-item', { 'is-hero': asset.assetId === field.gallery?.heroAssetId }]}
+                            data-gallery-asset={asset.assetId}
+                            draggable="true"
+                            tabindex="0"
+                            aria-label={`Gallery image: ${asset.filename}`}
+                          >
+                            <span class="cms-gallery-drag" aria-hidden="true"><i data-lucide="grip-vertical"></i></span>
                             <img src={asset.previewUrl} alt={asset.altText} width={asset.previewWidth} height={asset.previewHeight} />
-                            <strong>{asset.filename}</strong>
+                            <div class="cms-gallery-item-footer">
+                              <strong>{asset.filename}</strong>
+                              {asset.assetId === field.gallery?.heroAssetId && <span>Hero</span>}
+                            </div>
+                            <div class="cms-gallery-actions" aria-label={`${asset.filename} actions`}>
+                              <button
+                                class:list={['cms-icon-button', 'cms-gallery-action', { 'is-active': asset.assetId === field.gallery?.heroAssetId }]}
+                                type="button"
+                                title="Make hero image"
+                                aria-label={`Make ${asset.filename} the hero image`}
+                                data-gallery-set-hero={field.id}
+                                data-gallery-asset-id={asset.assetId}
+                              >
+                                <i data-lucide="star"></i>
+                              </button>
+                              <button
+                                class="cms-icon-button cms-gallery-action"
+                                type="button"
+                                title="Remove image"
+                                aria-label={`Remove ${asset.filename} from gallery`}
+                                data-gallery-remove={field.id}
+                                data-gallery-asset-id={asset.assetId}
+                              >
+                                <i data-lucide="trash-2"></i>
+                              </button>
+                            </div>
                           </article>
                         ))}
                       </div>
-                      <select class="cms-input" data-gallery-select={field.id} aria-label={`Add ${field.label} image`}>
-                        <option value="">Add from media</option>
-                        {model.mediaAssets.map((asset) => (
-                          <option value={asset.assetId}>{asset.filename}</option>
-                        ))}
-                      </select>
-                      <input class="cms-input" type="file" accept="image/jpeg,image/png,image/webp" data-gallery-upload={field.id} aria-label={`Upload ${field.label}`} />
-                      <div class="cms-button-row">
-                        <button class="cms-button cms-button-secondary" type="button" data-gallery-add={field.id}>Add</button>
-                        <button class="cms-button cms-button-secondary" type="button" data-gallery-upload-button={field.id}>Upload image</button>
-                        <button class="cms-button cms-button-secondary" type="button" data-gallery-move-up={field.id}>Move selected up</button>
-                        <button class="cms-button cms-button-secondary" type="button" data-gallery-move-down={field.id}>Move selected down</button>
-                        <button class="cms-button cms-button-secondary" type="button" data-gallery-set-hero={field.id}>Set selected as hero</button>
-                        <button class="cms-button cms-button-secondary" type="button" data-gallery-remove={field.id}>Remove selected</button>
+                      <div class="cms-gallery-tools">
+                        <select class="cms-input" data-gallery-select={field.id} aria-label={`Add ${field.label} image`}>
+                          <option value="">Add from media</option>
+                          {model.mediaAssets.map((asset) => (
+                            <option value={asset.assetId}>{asset.filename}</option>
+                          ))}
+                        </select>
+                        <button class="cms-icon-button cms-gallery-tool" type="button" title="Add selected image" aria-label="Add selected media image" data-gallery-add={field.id}>
+                          <i data-lucide="plus"></i>
+                        </button>
+                        <label class="cms-icon-button cms-gallery-tool" title="Upload image">
+                          <input class="cms-file-input" type="file" accept="image/jpeg,image/png,image/webp" data-gallery-upload={field.id} aria-label={`Upload ${field.label}`} />
+                          <i data-lucide="upload"></i>
+                          <span class="cms-visually-hidden">Upload image</span>
+                        </label>
                       </div>
+                      <small class="cms-gallery-helper" data-gallery-file-name={field.id}>Drag images to reorder. Uploaded images are optimized and added immediately.</small>
                       <small>{field.primitive}</small>
                     </div>
                   ) : isMultiline(field) ? (

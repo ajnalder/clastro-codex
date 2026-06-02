@@ -1,4 +1,12 @@
-import { createRichTextImageMarker, insertRichTextImageMarker } from './media-field-values';
+import { createIcons, GripVertical, Plus, Star, Trash2, Upload } from 'lucide';
+import {
+  addGalleryAsset,
+  createRichTextImageMarker,
+  insertRichTextImageMarker,
+  removeGalleryAsset,
+  reorderGalleryAsset,
+  setGalleryHero,
+} from './media-field-values';
 import { optimizeImageFile } from '../media/browser-optimizer';
 import type { MediaAsset } from '../media/types';
 
@@ -30,9 +38,21 @@ const mediaCaptionInput = document.querySelector<HTMLInputElement>('[data-media-
 const mediaMetadataTimers = new Map<string, number>();
 const mediaLibrary = new Map<string, CmsClientMediaAsset>();
 const mediaLibraryJson = root?.dataset.mediaLibrary ?? '[]';
+const galleryIcons = { GripVertical, Plus, Star, Trash2, Upload };
 
 for (const asset of JSON.parse(mediaLibraryJson) as CmsClientMediaAsset[]) {
   mediaLibrary.set(asset.assetId, asset);
+}
+
+function renderIcons(container: Document | HTMLElement = document): void {
+  createIcons({
+    icons: galleryIcons,
+    attrs: {
+      'stroke-width': '2',
+      'aria-hidden': 'true',
+    },
+    root: container,
+  });
 }
 
 function formatBytes(bytes: number): string {
@@ -103,7 +123,21 @@ async function uploadMediaFile(file: File, altText: string, caption = ''): Promi
   }
   const asset = (await response.json()) as MediaAsset;
   mediaLibrary.set(asset.assetId, asset);
+  appendMediaOptions(asset);
   return asset;
+}
+
+function appendMediaOptions(asset: MediaAsset): void {
+  document.querySelectorAll('[data-media-select], [data-gallery-select], [data-richtext-media-select]').forEach((element) => {
+    const select = element as unknown as HTMLSelectElement;
+    if ([...select.options].some((option) => option.value === asset.assetId)) {
+      return;
+    }
+    const option = document.createElement('option');
+    option.value = asset.assetId;
+    option.textContent = asset.filename;
+    select.appendChild(option);
+  });
 }
 
 function createMediaField(labelText: string, value: string, dataAttribute: string, assetId: string): HTMLLabelElement {
@@ -305,6 +339,16 @@ function updateImageFieldPreview(fieldId: string, assetId: string | null): void 
   image.width = previewAsset.width;
   image.height = previewAsset.height;
 
+  const removeButton = document.createElement('button');
+  removeButton.className = 'cms-icon-button cms-media-field-action';
+  removeButton.type = 'button';
+  removeButton.title = 'Remove image';
+  removeButton.setAttribute('aria-label', `Remove ${asset.filename}`);
+  removeButton.dataset.mediaFieldRemove = fieldId;
+  const removeIcon = document.createElement('i');
+  removeIcon.dataset.lucide = 'trash-2';
+  removeButton.appendChild(removeIcon);
+
   const caption = document.createElement('div');
   caption.className = 'cms-media-field-caption';
   const filename = document.createElement('strong');
@@ -315,7 +359,9 @@ function updateImageFieldPreview(fieldId: string, assetId: string | null): void 
   caption.appendChild(altText);
 
   preview.appendChild(image);
+  preview.appendChild(removeButton);
   preview.appendChild(caption);
+  renderIcons(preview);
 }
 
 function setImageFieldValue(fieldId: string, assetId: string | null): void {
@@ -340,19 +386,29 @@ document.addEventListener('click', (event) => {
   }
 });
 
-document.addEventListener('click', (event) => {
-  const button = (event.target as HTMLElement | null)?.closest<HTMLButtonElement>('[data-media-field-upload-button]');
-  if (!button?.dataset.mediaFieldUploadButton) return;
-  const fieldId = button.dataset.mediaFieldUploadButton;
-  const input = document.querySelector<HTMLInputElement>(`[data-media-field-upload="${CSS.escape(fieldId)}"]`);
-  const file = input?.files?.[0];
+function updateImageUploadHelper(fieldId: string, text: string): void {
+  const helper = document.querySelector<HTMLElement>(`[data-media-file-name="${CSS.escape(fieldId)}"]`);
+  if (helper) {
+    helper.textContent = text;
+  }
+}
+
+document.addEventListener('change', (event) => {
+  const input = (event.target as HTMLElement | null)?.closest<HTMLInputElement>('[data-media-field-upload]');
+  if (!input?.dataset.mediaFieldUpload) return;
+  const fieldId = input.dataset.mediaFieldUpload;
+  const file = input.files?.[0];
   if (!file) {
-    setStatus('Choose an image', 'Select an image for this field first.', true);
     return;
   }
+
+  updateImageUploadHelper(fieldId, file.name);
+  setStatus('Optimizing image', 'Creating WebP website variants before selecting this image.', true);
   void uploadMediaFile(file, file.name.replace(/\.[^.]+$/, '').replace(/[-_]+/g, ' '))
     .then((asset) => {
       setImageFieldValue(fieldId, asset.assetId);
+      input.value = '';
+      updateImageUploadHelper(fieldId, 'Uploaded images are optimized and selected immediately.');
       setStatus('Image selected', 'Uploaded image is saved in Media and selected for this field.', false);
     })
     .catch((error: unknown) => {
@@ -385,6 +441,17 @@ function renderGalleryPreview(fieldId: string, value: { heroAssetId: string | nu
     const card = document.createElement('article');
     card.className = `cms-gallery-item${assetId === value.heroAssetId ? ' is-hero' : ''}`;
     card.dataset.galleryAsset = assetId;
+    card.draggable = true;
+    card.tabIndex = 0;
+    card.setAttribute('aria-label', `Gallery image: ${asset?.filename ?? assetId}`);
+
+    const dragHandle = document.createElement('span');
+    dragHandle.className = 'cms-gallery-drag';
+    dragHandle.setAttribute('aria-hidden', 'true');
+    const dragIcon = document.createElement('i');
+    dragIcon.dataset.lucide = 'grip-vertical';
+    dragHandle.appendChild(dragIcon);
+    card.appendChild(dragHandle);
 
     if (asset) {
       const image = document.createElement('img');
@@ -396,12 +463,51 @@ function renderGalleryPreview(fieldId: string, value: { heroAssetId: string | nu
       card.appendChild(image);
     }
 
+    const footer = document.createElement('div');
+    footer.className = 'cms-gallery-item-footer';
     const label = document.createElement('strong');
     label.textContent = asset?.filename ?? assetId;
+    footer.appendChild(label);
 
-    card.appendChild(label);
+    if (assetId === value.heroAssetId) {
+      const heroLabel = document.createElement('span');
+      heroLabel.textContent = 'Hero';
+      footer.appendChild(heroLabel);
+    }
+
+    const actions = document.createElement('div');
+    actions.className = 'cms-gallery-actions';
+    actions.setAttribute('aria-label', `${asset?.filename ?? assetId} actions`);
+
+    const heroButton = document.createElement('button');
+    heroButton.className = `cms-icon-button cms-gallery-action${assetId === value.heroAssetId ? ' is-active' : ''}`;
+    heroButton.type = 'button';
+    heroButton.title = 'Make hero image';
+    heroButton.setAttribute('aria-label', `Make ${asset?.filename ?? assetId} the hero image`);
+    heroButton.dataset.gallerySetHero = fieldId;
+    heroButton.dataset.galleryAssetId = assetId;
+    const heroIcon = document.createElement('i');
+    heroIcon.dataset.lucide = 'star';
+    heroButton.appendChild(heroIcon);
+
+    const removeButton = document.createElement('button');
+    removeButton.className = 'cms-icon-button cms-gallery-action';
+    removeButton.type = 'button';
+    removeButton.title = 'Remove image';
+    removeButton.setAttribute('aria-label', `Remove ${asset?.filename ?? assetId} from gallery`);
+    removeButton.dataset.galleryRemove = fieldId;
+    removeButton.dataset.galleryAssetId = assetId;
+    const removeIcon = document.createElement('i');
+    removeIcon.dataset.lucide = 'trash-2';
+    removeButton.appendChild(removeIcon);
+
+    actions.appendChild(heroButton);
+    actions.appendChild(removeButton);
+    card.appendChild(footer);
+    card.appendChild(actions);
     preview.appendChild(card);
   }
+  renderIcons(preview);
 }
 
 function setGalleryValue(fieldId: string, value: { heroAssetId: string | null; assetIds: string[] }): void {
@@ -430,78 +536,134 @@ function addAssetToGallery(fieldId: string, assetId: string): void {
     setStatus('Already in gallery', 'That image is already in this gallery.', false);
     return;
   }
-  const assetIds = [...current.assetIds, assetId];
-  setGalleryValue(fieldId, {
-    heroAssetId: current.heroAssetId ?? assetId,
-    assetIds,
-  });
+  setGalleryValue(fieldId, addGalleryAsset(current, assetId));
 }
 
-function moveAssetInGallery(fieldId: string, assetId: string, direction: -1 | 1): void {
-  const current = getGalleryValue(fieldId);
-  const index = current.assetIds.indexOf(assetId);
-  const nextIndex = index + direction;
-  if (index < 0 || nextIndex < 0 || nextIndex >= current.assetIds.length) return;
-  const assetIds = [...current.assetIds];
-  const [asset] = assetIds.splice(index, 1);
-  assetIds.splice(nextIndex, 0, asset);
-  setGalleryValue(fieldId, {
-    heroAssetId: current.heroAssetId,
-    assetIds,
-  });
+function updateGalleryUploadHelper(fieldId: string, text: string): void {
+  const helper = document.querySelector<HTMLElement>(`[data-gallery-file-name="${CSS.escape(fieldId)}"]`);
+  if (helper) {
+    helper.textContent = text;
+  }
 }
 
 document.addEventListener('click', (event) => {
   const target = event.target as HTMLElement | null;
   const addButton = target?.closest<HTMLButtonElement>('[data-gallery-add]');
-  const uploadButton = target?.closest<HTMLButtonElement>('[data-gallery-upload-button]');
-  const moveUpButton = target?.closest<HTMLButtonElement>('[data-gallery-move-up]');
-  const moveDownButton = target?.closest<HTMLButtonElement>('[data-gallery-move-down]');
   const heroButton = target?.closest<HTMLButtonElement>('[data-gallery-set-hero]');
   const removeButton = target?.closest<HTMLButtonElement>('[data-gallery-remove]');
 
   if (addButton?.dataset.galleryAdd) {
     addAssetToGallery(addButton.dataset.galleryAdd, getSelectedGalleryAssetId(addButton.dataset.galleryAdd));
   }
-  if (moveUpButton?.dataset.galleryMoveUp) {
-    moveAssetInGallery(moveUpButton.dataset.galleryMoveUp, getSelectedGalleryAssetId(moveUpButton.dataset.galleryMoveUp), -1);
-  }
-  if (moveDownButton?.dataset.galleryMoveDown) {
-    moveAssetInGallery(moveDownButton.dataset.galleryMoveDown, getSelectedGalleryAssetId(moveDownButton.dataset.galleryMoveDown), 1);
-  }
   if (heroButton?.dataset.gallerySetHero) {
     const current = getGalleryValue(heroButton.dataset.gallerySetHero);
-    const assetId = getSelectedGalleryAssetId(heroButton.dataset.gallerySetHero);
+    const assetId = heroButton.dataset.galleryAssetId ?? '';
     if (current.assetIds.includes(assetId)) {
-      setGalleryValue(heroButton.dataset.gallerySetHero, { ...current, heroAssetId: assetId });
+      setGalleryValue(heroButton.dataset.gallerySetHero, setGalleryHero(current, assetId));
     }
   }
   if (removeButton?.dataset.galleryRemove) {
     const current = getGalleryValue(removeButton.dataset.galleryRemove);
-    const assetId = getSelectedGalleryAssetId(removeButton.dataset.galleryRemove);
-    const assetIds = current.assetIds.filter((candidate) => candidate !== assetId);
-    setGalleryValue(removeButton.dataset.galleryRemove, {
-      heroAssetId: current.heroAssetId === assetId ? assetIds[0] ?? null : current.heroAssetId,
-      assetIds,
-    });
-  }
-  if (uploadButton?.dataset.galleryUploadButton) {
-    const fieldId = uploadButton.dataset.galleryUploadButton;
-    const input = document.querySelector<HTMLInputElement>(`[data-gallery-upload="${CSS.escape(fieldId)}"]`);
-    const file = input?.files?.[0];
-    if (!file) {
-      setStatus('Choose an image', 'Select an image for this gallery first.', true);
-      return;
+    const assetId = removeButton.dataset.galleryAssetId ?? '';
+    if (assetId) {
+      setGalleryValue(removeButton.dataset.galleryRemove, removeGalleryAsset(current, assetId));
     }
-    void uploadMediaFile(file, file.name.replace(/\.[^.]+$/, '').replace(/[-_]+/g, ' '))
-      .then((asset) => {
-        addAssetToGallery(fieldId, asset.assetId);
-        setStatus('Gallery image added', 'Uploaded image is saved in Media and added to this gallery.', false);
-      })
-      .catch((error: unknown) => {
-        setStatus('Upload failed', error instanceof Error ? error.message : 'Unable to upload image.', true);
-      });
   }
+});
+
+document.addEventListener('change', (event) => {
+  const input = (event.target as HTMLElement | null)?.closest<HTMLInputElement>('[data-gallery-upload]');
+  if (!input?.dataset.galleryUpload) return;
+  const fieldId = input.dataset.galleryUpload;
+  const file = input.files?.[0];
+  if (!file) {
+    return;
+  }
+
+  updateGalleryUploadHelper(fieldId, file.name);
+  setStatus('Optimizing image', 'Creating WebP website variants before adding this image.', true);
+  void uploadMediaFile(file, file.name.replace(/\.[^.]+$/, '').replace(/[-_]+/g, ' '))
+    .then((asset) => {
+      addAssetToGallery(fieldId, asset.assetId);
+      input.value = '';
+      updateGalleryUploadHelper(fieldId, 'Drag images to reorder. Uploaded images are optimized and added immediately.');
+      setStatus('Gallery image added', 'Uploaded image is saved in Media and added to this gallery.', false);
+    })
+    .catch((error: unknown) => {
+      setStatus('Upload failed', error instanceof Error ? error.message : 'Unable to upload image.', true);
+    });
+});
+
+let draggedGalleryAsset: { fieldId: string; assetId: string } | null = null;
+
+function clearGalleryDropState(): void {
+  document.querySelectorAll<HTMLElement>('.cms-gallery-item.is-dragging, .cms-gallery-item.is-drop-target').forEach((item) => {
+    item.classList.remove('is-dragging', 'is-drop-target');
+  });
+}
+
+document.addEventListener('dragstart', (event) => {
+  const card = (event.target as HTMLElement | null)?.closest<HTMLElement>('[data-gallery-asset]');
+  const preview = card?.closest<HTMLElement>('[data-gallery-preview]');
+  const fieldId = preview?.dataset.galleryPreview;
+  const assetId = card?.dataset.galleryAsset;
+  if (!card || !fieldId || !assetId) {
+    return;
+  }
+
+  draggedGalleryAsset = { fieldId, assetId };
+  card.classList.add('is-dragging');
+  event.dataTransfer?.setData('text/plain', assetId);
+  if (event.dataTransfer) {
+    event.dataTransfer.effectAllowed = 'move';
+  }
+});
+
+document.addEventListener('dragover', (event) => {
+  const preview = (event.target as HTMLElement | null)?.closest<HTMLElement>('[data-gallery-preview]');
+  if (!preview || !draggedGalleryAsset || preview.dataset.galleryPreview !== draggedGalleryAsset.fieldId) {
+    return;
+  }
+  event.preventDefault();
+  if (event.dataTransfer) {
+    event.dataTransfer.dropEffect = 'move';
+  }
+
+  preview.querySelectorAll<HTMLElement>('.cms-gallery-item.is-drop-target').forEach((item) => {
+    item.classList.remove('is-drop-target');
+  });
+  const targetCard = (event.target as HTMLElement | null)?.closest<HTMLElement>('[data-gallery-asset]');
+  if (targetCard?.dataset.galleryAsset && targetCard.dataset.galleryAsset !== draggedGalleryAsset.assetId) {
+    targetCard.classList.add('is-drop-target');
+  }
+});
+
+document.addEventListener('drop', (event) => {
+  const preview = (event.target as HTMLElement | null)?.closest<HTMLElement>('[data-gallery-preview]');
+  if (!preview || !draggedGalleryAsset || preview.dataset.galleryPreview !== draggedGalleryAsset.fieldId) {
+    return;
+  }
+  event.preventDefault();
+
+  const targetCard = (event.target as HTMLElement | null)?.closest<HTMLElement>('[data-gallery-asset]');
+  const beforeAssetId = targetCard?.dataset.galleryAsset;
+  if (beforeAssetId === draggedGalleryAsset.assetId) {
+    clearGalleryDropState();
+    draggedGalleryAsset = null;
+    return;
+  }
+
+  setGalleryValue(
+    draggedGalleryAsset.fieldId,
+    reorderGalleryAsset(getGalleryValue(draggedGalleryAsset.fieldId), draggedGalleryAsset.assetId, beforeAssetId ?? null),
+  );
+  draggedGalleryAsset = null;
+  clearGalleryDropState();
+});
+
+document.addEventListener('dragend', () => {
+  draggedGalleryAsset = null;
+  clearGalleryDropState();
 });
 
 document.addEventListener('click', (event) => {
@@ -521,6 +683,8 @@ document.addEventListener('click', (event) => {
   scheduleItemDraftSave();
   setStatus('Image inserted', 'The rich text field now references a media library image.', true);
 });
+
+renderIcons();
 
 async function uploadSelectedMedia(): Promise<void> {
   const file = mediaUploadInput?.files?.[0];

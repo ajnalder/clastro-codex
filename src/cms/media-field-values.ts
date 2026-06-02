@@ -77,6 +77,26 @@ export function moveGalleryAsset(value: GalleryFieldValue, assetId: string, dire
   return normalizeGalleryFieldValue({ heroAssetId: value.heroAssetId, assetIds });
 }
 
+export function reorderGalleryAsset(
+  value: GalleryFieldValue,
+  assetId: string,
+  beforeAssetId: string | null,
+): GalleryFieldValue {
+  if (!value.assetIds.includes(assetId)) {
+    return normalizeGalleryFieldValue(value);
+  }
+
+  const assetIds = value.assetIds.filter((candidate) => candidate !== assetId);
+  const nextIndex = beforeAssetId ? assetIds.indexOf(beforeAssetId) : -1;
+  if (nextIndex < 0) {
+    assetIds.push(assetId);
+  } else {
+    assetIds.splice(nextIndex, 0, assetId);
+  }
+
+  return normalizeGalleryFieldValue({ heroAssetId: value.heroAssetId, assetIds });
+}
+
 export function setGalleryHero(value: GalleryFieldValue, assetId: string): GalleryFieldValue {
   return normalizeGalleryFieldValue({
     heroAssetId: assetId,
