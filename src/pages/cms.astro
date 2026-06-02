@@ -53,11 +53,20 @@ const isPagesMode = model.activeMode === 'pages';
 const isMediaMode = model.activeMode === 'media';
 const activeStatus = isPagesMode ? activePage?.status : activeItem?.status;
 const statusLabel = isMediaMode ? 'Media library' : activeStatus === 'published' ? 'Published' : 'Saved draft';
+const mediaLibraryJson = JSON.stringify(model.mediaAssets);
 
 const multilinePrimitives = new Set(['richText', 'longText', 'seoMetadata', 'table', 'faqList', 'callout']);
 
 function isMultiline(field: CmsFieldView) {
   return multilinePrimitives.has(field.primitive);
+}
+
+function isImageField(field: CmsFieldView) {
+  return field.primitive === 'image';
+}
+
+function isGalleryField(field: CmsFieldView) {
+  return field.primitive === 'imageGallery' || field.primitive === 'sortableGallery';
 }
 ---
 
@@ -70,7 +79,7 @@ function isMultiline(field: CmsFieldView) {
     <title>Clastro CMS</title>
   </head>
   <body>
-    <main class="cms-shell" data-cms-root data-editor-mode={model.activeMode}>
+    <main class="cms-shell" data-cms-root data-editor-mode={model.activeMode} data-media-library={mediaLibraryJson}>
       <aside class="cms-sidebar" aria-label="CMS navigation">
         <a class="cms-brand" href="/">
           <span class="cms-brand-mark">C</span>
@@ -284,7 +293,7 @@ function isMultiline(field: CmsFieldView) {
         )}
 
         {!isPagesMode && activeItem && (
-          <form class="cms-form" data-editor-form>
+          <form class="cms-form" data-editor-form data-collection-id={activeCollection?.id} data-item-id={activeItem.id}>
             <section class="cms-field-section" aria-labelledby="core-fields-heading">
               <div class="cms-subheading">
                 <p class="cms-kicker">Core schema</p>
@@ -293,12 +302,89 @@ function isMultiline(field: CmsFieldView) {
 
               <div class="cms-fields">
                 {activeItem.fields.map((field) => (
-                  <label class="cms-field" for={`core-${field.id}`}>
-                    <span>
-                      {field.label}
-                      {field.required && <em>Required</em>}
-                    </span>
-                    {isMultiline(field) ? (
+                  isImageField(field) ? (
+                    <div class="cms-field cms-media-field" data-cms-field-shell={field.id}>
+                      <span>
+                        {field.label}
+                        {field.required && <em>Required</em>}
+                      </span>
+                      <div class="cms-media-field-preview" data-image-preview={field.id}>
+                        {field.mediaAsset ? (
+                          <>
+                            <img src={field.mediaAsset.previewUrl} alt={field.mediaAsset.altText} width={field.mediaAsset.previewWidth} height={field.mediaAsset.previewHeight} />
+                            <div class="cms-media-field-caption">
+                              <strong>{field.mediaAsset.filename}</strong>
+                              <small>{field.mediaAsset.altText}</small>
+                            </div>
+                          </>
+                        ) : (
+                          <strong>No image selected</strong>
+                        )}
+                      </div>
+                      <input type="hidden" name={`core-${field.id}`} value={JSON.stringify(field.imageValue)} data-field={field.id} data-media-image-field={field.id} />
+                      <select class="cms-input" data-media-select={field.id} aria-label={`Choose ${field.label}`}>
+                        <option value="">Choose from media</option>
+                        {model.mediaAssets.map((asset) => (
+                          <option value={asset.assetId} selected={asset.assetId === field.imageValue?.assetId}>{asset.filename}</option>
+                        ))}
+                      </select>
+                      <input class="cms-input" type="file" accept="image/jpeg,image/png,image/webp" data-media-field-upload={field.id} aria-label={`Upload ${field.label}`} />
+                      <div class="cms-button-row">
+                        <button class="cms-button cms-button-secondary" type="button" data-media-field-apply={field.id}>Choose</button>
+                        <button class="cms-button cms-button-secondary" type="button" data-media-field-upload-button={field.id}>Upload image</button>
+                        <button class="cms-button cms-button-secondary" type="button" data-media-field-remove={field.id}>Remove</button>
+                      </div>
+                      <small>{field.primitive}</small>
+                    </div>
+                  ) : isGalleryField(field) ? (
+                    <div class="cms-field cms-gallery-field" data-cms-field-shell={field.id}>
+                      <span>
+                        {field.label}
+                        {field.required && <em>Required</em>}
+                      </span>
+                      <input type="hidden" name={`core-${field.id}`} value={JSON.stringify(field.galleryValue)} data-field={field.id} data-media-gallery-field={field.id} />
+                      <div class="cms-gallery-grid" data-gallery-preview={field.id}>
+                        {field.gallery?.assets.map((asset) => (
+                          <article class:list={['cms-gallery-item', { 'is-hero': asset.assetId === field.gallery?.heroAssetId }]} data-gallery-asset={asset.assetId}>
+                            <img src={asset.previewUrl} alt={asset.altText} width={asset.previewWidth} height={asset.previewHeight} />
+                            <strong>{asset.filename}</strong>
+                          </article>
+                        ))}
+                      </div>
+                      <select class="cms-input" data-gallery-select={field.id} aria-label={`Add ${field.label} image`}>
+                        <option value="">Add from media</option>
+                        {model.mediaAssets.map((asset) => (
+                          <option value={asset.assetId}>{asset.filename}</option>
+                        ))}
+                      </select>
+                      <input class="cms-input" type="file" accept="image/jpeg,image/png,image/webp" data-gallery-upload={field.id} aria-label={`Upload ${field.label}`} />
+                      <div class="cms-button-row">
+                        <button class="cms-button cms-button-secondary" type="button" data-gallery-add={field.id}>Add</button>
+                        <button class="cms-button cms-button-secondary" type="button" data-gallery-upload-button={field.id}>Upload image</button>
+                        <button class="cms-button cms-button-secondary" type="button" data-gallery-move-up={field.id}>Move selected up</button>
+                        <button class="cms-button cms-button-secondary" type="button" data-gallery-move-down={field.id}>Move selected down</button>
+                        <button class="cms-button cms-button-secondary" type="button" data-gallery-set-hero={field.id}>Set selected as hero</button>
+                        <button class="cms-button cms-button-secondary" type="button" data-gallery-remove={field.id}>Remove selected</button>
+                      </div>
+                      <small>{field.primitive}</small>
+                    </div>
+                  ) : isMultiline(field) ? (
+                    <label class="cms-field" for={`core-${field.id}`}>
+                      <span>
+                        {field.label}
+                        {field.required && <em>Required</em>}
+                      </span>
+                      {field.primitive === 'richText' && (
+                        <div class="cms-richtext-toolbar">
+                          <select class="cms-input" data-richtext-media-select={field.id} aria-label={`Insert image into ${field.label}`}>
+                            <option value="">Insert image from media</option>
+                            {model.mediaAssets.map((asset) => (
+                              <option value={asset.assetId}>{asset.filename}</option>
+                            ))}
+                          </select>
+                          <button class="cms-button cms-button-secondary" type="button" data-richtext-insert-image={field.id}>Insert image</button>
+                        </div>
+                      )}
                       <textarea
                         class="cms-input cms-textarea"
                         id={`core-${field.id}`}
@@ -306,7 +392,14 @@ function isMultiline(field: CmsFieldView) {
                         aria-label={field.label}
                         data-field={field.id}
                       >{field.value}</textarea>
-                    ) : (
+                      <small>{field.primitive}</small>
+                    </label>
+                  ) : (
+                    <label class="cms-field" for={`core-${field.id}`}>
+                      <span>
+                        {field.label}
+                        {field.required && <em>Required</em>}
+                      </span>
                       <input
                         class="cms-input"
                         id={`core-${field.id}`}
@@ -315,9 +408,9 @@ function isMultiline(field: CmsFieldView) {
                         value={field.value}
                         data-field={field.id}
                       />
-                    )}
-                    <small>{field.primitive}</small>
-                  </label>
+                      <small>{field.primitive}</small>
+                    </label>
+                  )
                 ))}
               </div>
             </section>
