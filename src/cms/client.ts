@@ -2,6 +2,21 @@ import { createRichTextImageMarker, insertRichTextImageMarker } from './media-fi
 import { optimizeImageFile } from '../media/browser-optimizer';
 import type { MediaAsset } from '../media/types';
 
+interface CmsClientMediaAssetView {
+  assetId: string;
+  filename: string;
+  altText: string;
+  caption: string;
+  width: number;
+  height: number;
+  previewUrl: string;
+  previewWidth: number;
+  previewHeight: number;
+  largeBytesLabel: string;
+}
+
+type CmsClientMediaAsset = MediaAsset | CmsClientMediaAssetView;
+
 const root = document.querySelector<HTMLElement>('[data-cms-root]');
 const statusText = document.querySelector<HTMLElement>('[data-status-text]');
 const statusPill = document.querySelector<HTMLElement>('[data-status-pill]');
@@ -13,10 +28,10 @@ const mediaUploadButton = document.querySelector<HTMLButtonElement>('[data-media
 const mediaAltInput = document.querySelector<HTMLInputElement>('[data-media-alt]');
 const mediaCaptionInput = document.querySelector<HTMLInputElement>('[data-media-caption]');
 const mediaMetadataTimers = new Map<string, number>();
-const mediaLibrary = new Map<string, MediaAsset>();
+const mediaLibrary = new Map<string, CmsClientMediaAsset>();
 const mediaLibraryJson = root?.dataset.mediaLibrary ?? '[]';
 
-for (const asset of JSON.parse(mediaLibraryJson) as MediaAsset[]) {
+for (const asset of JSON.parse(mediaLibraryJson) as CmsClientMediaAsset[]) {
   mediaLibrary.set(asset.assetId, asset);
 }
 
@@ -28,6 +43,28 @@ function formatBytes(bytes: number): string {
     return `${Math.round(bytes / 1000)} KB`;
   }
   return `${(bytes / 1000 / 1000).toFixed(1)} MB`;
+}
+
+function getAssetPreview(asset: CmsClientMediaAsset): { url: string; width: number; height: number } {
+  if ('variants' in asset) {
+    return {
+      url: asset.variants.thumb.url,
+      width: asset.variants.thumb.width,
+      height: asset.variants.thumb.height,
+    };
+  }
+  return {
+    url: asset.previewUrl,
+    width: asset.previewWidth,
+    height: asset.previewHeight,
+  };
+}
+
+function getAssetLargeBytesLabel(asset: CmsClientMediaAsset): string {
+  if ('variants' in asset) {
+    return formatBytes(asset.variants.large.bytes);
+  }
+  return asset.largeBytesLabel;
 }
 
 function setStatus(label: string, helper: string, dirty: boolean): void {
@@ -126,7 +163,7 @@ function appendMediaAssetRow(asset: MediaAsset): void {
 
   filename.textContent = asset.filename;
   dimensions.textContent = `${asset.width} x ${asset.height}`;
-  bytes.textContent = formatBytes(asset.variants.large.bytes);
+  bytes.textContent = getAssetLargeBytesLabel(asset);
 
   text.appendChild(filename);
   text.appendChild(dimensions);
@@ -149,16 +186,17 @@ function appendMediaAsset(asset: MediaAsset): void {
   card.dataset.mediaAsset = asset.assetId;
 
   const preview = document.createElement('img');
+  const previewAsset = getAssetPreview(asset);
   preview.className = 'cms-media-preview';
-  preview.src = asset.variants.thumb.url;
+  preview.src = previewAsset.url;
   preview.alt = asset.altText;
-  preview.width = asset.variants.thumb.width;
-  preview.height = asset.variants.thumb.height;
+  preview.width = previewAsset.width;
+  preview.height = previewAsset.height;
 
   const meta = document.createElement('dl');
   meta.className = 'cms-media-meta';
   meta.appendChild(createMediaMetaTerm('Size', `${asset.width} x ${asset.height}`));
-  meta.appendChild(createMediaMetaTerm('Large', formatBytes(asset.variants.large.bytes)));
+  meta.appendChild(createMediaMetaTerm('Large', getAssetLargeBytesLabel(asset)));
 
   card.appendChild(preview);
   card.appendChild(createMediaField('Alt text', asset.altText, 'data-media-asset-alt', asset.assetId));
@@ -261,10 +299,11 @@ function updateImageFieldPreview(fieldId: string, assetId: string | null): void 
   }
 
   const image = document.createElement('img');
-  image.src = asset.variants.thumb.url;
+  const previewAsset = getAssetPreview(asset);
+  image.src = previewAsset.url;
   image.alt = asset.altText;
-  image.width = asset.variants.thumb.width;
-  image.height = asset.variants.thumb.height;
+  image.width = previewAsset.width;
+  image.height = previewAsset.height;
 
   const caption = document.createElement('div');
   caption.className = 'cms-media-field-caption';
@@ -343,21 +382,23 @@ function renderGalleryPreview(fieldId: string, value: { heroAssetId: string | nu
   preview.innerHTML = '';
   for (const assetId of value.assetIds) {
     const asset = mediaLibrary.get(assetId);
-    if (!asset) continue;
     const card = document.createElement('article');
     card.className = `cms-gallery-item${assetId === value.heroAssetId ? ' is-hero' : ''}`;
     card.dataset.galleryAsset = assetId;
 
-    const image = document.createElement('img');
-    image.src = asset.variants.thumb.url;
-    image.alt = asset.altText;
-    image.width = asset.variants.thumb.width;
-    image.height = asset.variants.thumb.height;
+    if (asset) {
+      const image = document.createElement('img');
+      const previewAsset = getAssetPreview(asset);
+      image.src = previewAsset.url;
+      image.alt = asset.altText;
+      image.width = previewAsset.width;
+      image.height = previewAsset.height;
+      card.appendChild(image);
+    }
 
     const label = document.createElement('strong');
-    label.textContent = asset.filename;
+    label.textContent = asset?.filename ?? assetId;
 
-    card.appendChild(image);
     card.appendChild(label);
     preview.appendChild(card);
   }
