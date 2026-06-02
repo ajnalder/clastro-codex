@@ -1,4 +1,5 @@
 import type { ExtraSectionValue, JsonObject } from '../content-store/types';
+import type { MediaAsset } from '../media/types';
 
 export interface CmsSampleItem {
   collectionId: string;
@@ -288,5 +289,46 @@ export const plumberPages: CmsSamplePage[] = [
       pageHeading: 'Straightforward plumbing advice.',
       intro: 'Short articles for homeowners who want to make the right call before a small plumbing issue turns expensive.',
     },
+  },
+];
+
+export const plumberMediaAssets: MediaAsset[] = [
+  {
+    siteId: 'joes-plumbing',
+    assetId: 'joes-plumbing-van',
+    filename: 'joes-plumbing-van.webp',
+    altText: "Joe's Plumbing van beside pipework",
+    caption: 'Illustrated service van used on the homepage hero.',
+    contentType: 'image/webp',
+    width: 900,
+    height: 620,
+    variants: {
+      thumb: {
+        r2Key: 'sites/joes-plumbing/media/joes-plumbing-van/thumb.webp',
+        url: '/joe-plumbing/van.svg',
+        width: 360,
+        height: 248,
+        bytes: 18420,
+        contentType: 'image/webp',
+      },
+      card: {
+        r2Key: 'sites/joes-plumbing/media/joes-plumbing-van/card.webp',
+        url: '/joe-plumbing/van.svg',
+        width: 900,
+        height: 620,
+        bytes: 46200,
+        contentType: 'image/webp',
+      },
+      large: {
+        r2Key: 'sites/joes-plumbing/media/joes-plumbing-van/large.webp',
+        url: '/joe-plumbing/van.svg',
+        width: 900,
+        height: 620,
+        bytes: 46200,
+        contentType: 'image/webp',
+      },
+    },
+    createdAt: '2026-06-02T00:00:00.000Z',
+    updatedAt: '2026-06-02T00:00:00.000Z',
   },
 ];

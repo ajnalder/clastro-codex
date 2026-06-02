@@ -1,6 +1,6 @@
 ---
 import { plumberContract } from '../contracts';
-import { plumberItems, plumberPages } from '../cms/sample-content';
+import { plumberItems, plumberMediaAssets, plumberPages } from '../cms/sample-content';
 import { createCmsViewModel, type CmsFieldView } from '../cms/view-model';
 import '../styles/cms.css';
 
@@ -10,21 +10,22 @@ const selectedView = Astro.url.searchParams.get('view');
 const selectedCollectionId = Astro.url.searchParams.get('collection') ?? undefined;
 const selectedItemId = Astro.url.searchParams.get('item') ?? undefined;
 const selectedPageId = Astro.url.searchParams.get('page') ?? undefined;
-const mode = selectedView === 'pages' || selectedPageId ? 'pages' : 'collections';
+const mode = selectedView === 'media' ? 'media' : selectedView === 'pages' || selectedPageId ? 'pages' : 'collections';
 
 const model = createCmsViewModel(plumberContract, plumberItems, {
   mode,
   selectedCollectionId,
   selectedItemId,
   selectedPageId,
-}, plumberPages);
+}, plumberPages, plumberMediaAssets);
 
 const activeCollection = model.activeCollection;
 const activeItem = model.activeItem;
 const activePage = model.activePage;
 const isPagesMode = model.activeMode === 'pages';
+const isMediaMode = model.activeMode === 'media';
 const activeStatus = isPagesMode ? activePage?.status : activeItem?.status;
-const statusLabel = activeStatus === 'published' ? 'Published' : 'Saved draft';
+const statusLabel = isMediaMode ? 'Media library' : activeStatus === 'published' ? 'Published' : 'Saved draft';
 
 const multilinePrimitives = new Set(['richText', 'longText', 'seoMetadata', 'table', 'faqList', 'callout']);
 
@@ -72,14 +73,42 @@ function isMultiline(field: CmsFieldView) {
           ))}
         </nav>
 
+        <nav class="cms-nav" aria-label="Media">
+          <p class="cms-kicker">Assets</p>
+          <a class:list={['cms-nav-item', { 'is-active': isMediaMode }]} href="/cms?view=media">
+            <span>Media</span>
+            <small>{model.mediaAssets.length}</small>
+          </a>
+        </nav>
+
         <div class="cms-sidebar-note">
           <p class="cms-kicker">Framework rule</p>
           <p>The backend follows the client’s business language while the content contract keeps the plumbing consistent.</p>
         </div>
       </aside>
 
-      <section class="cms-list" aria-label={isPagesMode ? 'Pages' : 'Collection items'}>
-        {isPagesMode ? (
+      <section class="cms-list" aria-label={isMediaMode ? 'Media assets' : isPagesMode ? 'Pages' : 'Collection items'}>
+        {isMediaMode ? (
+          <>
+            <div class="cms-section-heading">
+              <p class="cms-kicker">Media</p>
+              <h1>Assets</h1>
+              <p>Optimized images stored for website use.</p>
+            </div>
+
+            <div class="cms-item-list">
+              {model.mediaAssets.map((asset) => (
+                <a class="cms-item-row" href={`#media-${asset.assetId}`}>
+                  <span>
+                    <strong>{asset.filename}</strong>
+                    <small>{asset.width} x {asset.height}</small>
+                  </span>
+                  <em>{asset.largeBytesLabel}</em>
+                </a>
+              ))}
+            </div>
+          </>
+        ) : isPagesMode ? (
           <>
             <div class="cms-section-heading">
               <p class="cms-kicker">Static pages</p>
@@ -122,18 +151,69 @@ function isMultiline(field: CmsFieldView) {
         )}
       </section>
 
-      <section class="cms-editor" aria-label={isPagesMode ? 'Page editor' : 'Item editor'}>
+      <section class="cms-editor" aria-label={isMediaMode ? 'Media editor' : isPagesMode ? 'Page editor' : 'Item editor'}>
         <header class="cms-editor-header">
           <div>
-            <p class="cms-kicker">{isPagesMode ? 'Page settings' : 'Editing globally'}</p>
-            <h2>{isPagesMode ? activePage?.label ?? 'Select a page' : activeItem?.label ?? 'Select an item'}</h2>
-            <p>{isPagesMode ? activePage?.path : `${activeCollection?.label} / ${activeItem?.id}`}</p>
+            <p class="cms-kicker">{isMediaMode ? 'Media library' : isPagesMode ? 'Page settings' : 'Editing globally'}</p>
+            <h2>{isMediaMode ? 'Website images' : isPagesMode ? activePage?.label ?? 'Select a page' : activeItem?.label ?? 'Select an item'}</h2>
+            <p>{isMediaMode ? 'Upload optimized images, add alt text, and manage captions.' : isPagesMode ? activePage?.path : `${activeCollection?.label} / ${activeItem?.id}`}</p>
           </div>
           <div class="cms-editor-actions">
             {isPagesMode && activePage && <a class="cms-button cms-button-secondary" href={activePage.editHref}>Edit page</a>}
             <div class="cms-status-pill" data-status-pill>{statusLabel}</div>
           </div>
         </header>
+
+        {isMediaMode && (
+          <form class="cms-form cms-media-form" data-media-form>
+            <section class="cms-upload-panel">
+              <div>
+                <p class="cms-kicker">Optimized upload</p>
+                <h3>Add website image</h3>
+                <p>JPEG, PNG, or WebP images are converted into optimized WebP variants before storage.</p>
+              </div>
+              <label class="cms-field" for="media-upload">
+                <span>Image file</span>
+                <input class="cms-input" id="media-upload" type="file" accept="image/jpeg,image/png,image/webp" data-media-upload />
+              </label>
+              <label class="cms-field" for="media-alt">
+                <span>Alt text <em>Required</em></span>
+                <input class="cms-input" id="media-alt" data-media-alt />
+              </label>
+              <label class="cms-field" for="media-caption">
+                <span>Caption</span>
+                <input class="cms-input" id="media-caption" data-media-caption />
+              </label>
+              <button class="cms-button" type="button" data-media-upload-button>Upload optimized image</button>
+            </section>
+
+            <section class="cms-field-section">
+              <div class="cms-subheading">
+                <p class="cms-kicker">Library</p>
+                <h3>Website images</h3>
+              </div>
+              <div class="cms-media-grid">
+                {model.mediaAssets.map((asset) => (
+                  <article class="cms-media-card" id={`media-${asset.assetId}`} data-media-asset={asset.assetId}>
+                    <img class="cms-media-preview" src={asset.previewUrl} alt={asset.altText} width={asset.previewWidth} height={asset.previewHeight} />
+                    <label class="cms-field">
+                      <span>Alt text</span>
+                      <input class="cms-input" value={asset.altText} data-media-asset-alt={asset.assetId} />
+                    </label>
+                    <label class="cms-field">
+                      <span>Caption</span>
+                      <input class="cms-input" value={asset.caption} data-media-asset-caption={asset.assetId} />
+                    </label>
+                    <dl class="cms-media-meta">
+                      <div><dt>Size</dt><dd>{asset.width} x {asset.height}</dd></div>
+                      <div><dt>Large</dt><dd>{asset.largeBytesLabel}</dd></div>
+                    </dl>
+                  </article>
+                ))}
+              </div>
+            </section>
+          </form>
+        )}
 
         {isPagesMode && activePage && (
           <form class="cms-form" data-editor-form>
@@ -285,7 +365,9 @@ function isMultiline(field: CmsFieldView) {
         <section class="cms-rail-section">
           <p class="cms-kicker">Source of truth</p>
           <p>
-            {isPagesMode
+            {isMediaMode
+              ? 'Media metadata and optimized image variants are stored separately. Published pages should reference optimized assets only.'
+              : isPagesMode
               ? 'On-page copy is edited visually from the page itself. This screen only stores page settings and SEO.'
               : 'Editing this item changes the collection source globally. Pages that pull this content should use the updated source on publish.'}
           </p>
@@ -315,6 +397,21 @@ function isMultiline(field: CmsFieldView) {
                 <div>
                   <dt>Settings</dt>
                   <dd>{activePage?.fields.length ?? 0}</dd>
+                </div>
+              </>
+            ) : isMediaMode ? (
+              <>
+                <div>
+                  <dt>Assets</dt>
+                  <dd>{model.mediaAssets.length}</dd>
+                </div>
+                <div>
+                  <dt>Format</dt>
+                  <dd>WebP</dd>
+                </div>
+                <div>
+                  <dt>Originals</dt>
+                  <dd>Discarded</dd>
                 </div>
               </>
             ) : (

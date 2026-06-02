@@ -1,6 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import { plasticSurgeonContract, plumberContract } from '../../src/contracts';
-import { plasticSurgeonItems, plasticSurgeonPages, plumberItems, plumberPages } from '../../src/cms/sample-content';
+import {
+  plasticSurgeonItems,
+  plasticSurgeonPages,
+  plumberItems,
+  plumberMediaAssets,
+  plumberPages,
+} from '../../src/cms/sample-content';
 import { createCmsViewModel } from '../../src/cms/view-model';
 
 describe('createCmsViewModel', () => {
@@ -87,5 +93,23 @@ describe('createCmsViewModel', () => {
     );
     expect(plumberPages.find((page) => page.pageId === 'home')?.values.serviceHeading).toBe('Services Joe keeps ready.');
     expect(model.activePage?.editHref).toBe('/joe-plumbing?clastro-edit=1');
+  });
+
+  it('creates a media mode with sample assets', () => {
+    const model = createCmsViewModel(
+      plumberContract,
+      plumberItems,
+      { mode: 'media' },
+      plumberPages,
+      plumberMediaAssets,
+    );
+
+    expect(model.activeMode).toBe('media');
+    expect(model.mediaAssets).toEqual([
+      expect.objectContaining({
+        filename: 'joes-plumbing-van.webp',
+        altText: "Joe's Plumbing van beside pipework",
+      }),
+    ]);
   });
 });

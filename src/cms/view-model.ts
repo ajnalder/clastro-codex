@@ -1,4 +1,5 @@
 import type { ContentContract, FieldDefinition } from '../contracts';
+import type { MediaAsset } from '../media/types';
 import type { CmsSampleItem, CmsSamplePage } from './sample-content';
 
 export interface CmsNavigationItem {
@@ -58,17 +59,31 @@ export interface CmsPageView {
   fields: CmsFieldView[];
 }
 
+export interface CmsMediaAssetView {
+  assetId: string;
+  filename: string;
+  altText: string;
+  caption: string;
+  width: number;
+  height: number;
+  previewUrl: string;
+  previewWidth: number;
+  previewHeight: number;
+  largeBytesLabel: string;
+}
+
 export interface CmsViewModel {
-  activeMode: 'collections' | 'pages';
+  activeMode: 'collections' | 'pages' | 'media';
   navigation: CmsNavigationItem[];
   pageNavigation: CmsPageNavigationItem[];
   activeCollection: CmsCollectionView | null;
   activeItem: CmsItemView | null;
   activePage: CmsPageView | null;
+  mediaAssets: CmsMediaAssetView[];
 }
 
 interface Selection {
-  mode?: 'collections' | 'pages';
+  mode?: 'collections' | 'pages' | 'media';
   selectedCollectionId?: string;
   selectedItemId?: string;
   selectedPageId?: string;
@@ -124,13 +139,40 @@ function createPageView(pageDefinition: NonNullable<ContentContract['pages'][num
   };
 }
 
+function formatBytes(bytes: number): string {
+  if (bytes < 1000) {
+    return `${bytes} B`;
+  }
+  if (bytes < 1000 * 1000) {
+    return `${Math.round(bytes / 1000)} KB`;
+  }
+  return `${(bytes / 1000 / 1000).toFixed(1)} MB`;
+}
+
+function createMediaAssetView(asset: MediaAsset): CmsMediaAssetView {
+  return {
+    assetId: asset.assetId,
+    filename: asset.filename,
+    altText: asset.altText,
+    caption: asset.caption,
+    width: asset.width,
+    height: asset.height,
+    previewUrl: asset.variants.thumb.url,
+    previewWidth: asset.variants.thumb.width,
+    previewHeight: asset.variants.thumb.height,
+    largeBytesLabel: formatBytes(asset.variants.large.bytes),
+  };
+}
+
 export function createCmsViewModel(
   contract: ContentContract,
   items: CmsSampleItem[],
   selection: Selection = {},
   pages: CmsSamplePage[] = [],
+  mediaAssets: MediaAsset[] = [],
 ): CmsViewModel {
   const activeMode = selection.mode ?? (selection.selectedPageId ? 'pages' : 'collections');
+  const mediaAssetViews = mediaAssets.map(createMediaAssetView);
 
   const activeCollectionDefinition =
     contract.collections.find((collection) => collection.id === selection.selectedCollectionId) ??
@@ -156,6 +198,18 @@ export function createCmsViewModel(
     active: activeMode === 'pages' && page.id === activePageDefinition?.id,
   }));
 
+  if (activeMode === 'media') {
+    return {
+      activeMode,
+      navigation,
+      pageNavigation,
+      activeCollection: null,
+      activeItem: null,
+      activePage: null,
+      mediaAssets: mediaAssetViews,
+    };
+  }
+
   if (!activeCollectionDefinition) {
     return {
       activeMode,
@@ -164,6 +218,7 @@ export function createCmsViewModel(
       activeCollection: null,
       activeItem: null,
       activePage: activePageDefinition && selectedPage ? createPageView(activePageDefinition, selectedPage) : null,
+      mediaAssets: mediaAssetViews,
     };
   }
 
@@ -191,6 +246,7 @@ export function createCmsViewModel(
       activeCollection,
       activeItem: null,
       activePage: null,
+      mediaAssets: mediaAssetViews,
     };
   }
 
@@ -220,5 +276,6 @@ export function createCmsViewModel(
     activeCollection,
     activeItem,
     activePage,
+    mediaAssets: mediaAssetViews,
   };
 }
