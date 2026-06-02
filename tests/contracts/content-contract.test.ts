@@ -100,6 +100,9 @@ describe('example contracts', () => {
     );
     expect(services?.extraSectionTypes.map((section) => section.id)).toContain('serviceAreaList');
     expect(services?.extraSectionTypes.map((section) => section.id)).toContain('priceGuide');
+    expect(services?.coreFields.map((field) => field.id)).toContain('gallery');
+    expect(services?.coreFields.find((field) => field.id === 'gallery')?.primitive).toBe('sortableGallery');
     expect(blogPosts?.itemLabel).toBe('Blog Post');
+    expect(blogPosts?.coreFields.find((field) => field.id === 'heroImage')?.primitive).toBe('image');
   });
 });

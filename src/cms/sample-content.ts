@@ -113,7 +113,11 @@ export const plumberItems: CmsSampleItem[] = [
       title: 'Emergency Plumbing',
       slug: 'emergency-plumbing',
       summary: 'Fast help for leaks, burst pipes, blocked drains, and urgent plumbing faults.',
-      heroImage: 'media/emergency-plumbing.jpg',
+      heroImage: { assetId: 'joes-plumbing-van', role: 'hero' },
+      gallery: {
+        heroAssetId: 'joes-plumbing-van',
+        assetIds: ['joes-plumbing-van'],
+      },
       seo: 'Emergency plumber available today',
     },
     extraSections: [
@@ -146,7 +150,11 @@ export const plumberItems: CmsSampleItem[] = [
       title: 'Hot Water Repairs',
       slug: 'hot-water-repairs',
       summary: 'Repair, replacement, and maintenance for cylinders, valves, and tempering faults.',
-      heroImage: 'media/hot-water-repairs.jpg',
+      heroImage: { assetId: 'joes-plumbing-van', role: 'hero' },
+      gallery: {
+        heroAssetId: 'joes-plumbing-van',
+        assetIds: ['joes-plumbing-van'],
+      },
       seo: 'Hot water cylinder repair and replacement in Tauranga',
     },
     extraSections: [
@@ -167,7 +175,11 @@ export const plumberItems: CmsSampleItem[] = [
       title: 'Blocked Drains',
       slug: 'blocked-drains',
       summary: 'Drain clearing for kitchens, bathrooms, gullies, and stormwater lines.',
-      heroImage: 'media/blocked-drains.jpg',
+      heroImage: { assetId: 'joes-plumbing-van', role: 'hero' },
+      gallery: {
+        heroAssetId: 'joes-plumbing-van',
+        assetIds: ['joes-plumbing-van'],
+      },
       seo: 'Blocked drain plumber in Tauranga',
     },
     extraSections: [
@@ -189,7 +201,7 @@ export const plumberItems: CmsSampleItem[] = [
       slug: 'how-to-shut-off-water',
       excerpt: 'A quick homeowner guide for finding the toby, isolating fixtures, and reducing water damage.',
       body: 'Knowing where to shut off water can turn a stressful leak into a manageable repair call.',
-      heroImage: 'media/shut-off-water.jpg',
+      heroImage: { assetId: 'joes-plumbing-van', role: 'hero' },
       publishDate: '2026-05-15',
       seo: 'How to shut off water during a plumbing emergency',
     },
@@ -205,7 +217,7 @@ export const plumberItems: CmsSampleItem[] = [
       slug: 'hot-water-cylinder-warning-signs',
       excerpt: 'Noisy valves, rusty water, pressure changes, and recovery time can all point to a repair.',
       body: 'Small changes in hot water performance often show up before a cylinder fails completely.',
-      heroImage: 'media/hot-water-warning-signs.jpg',
+      heroImage: { assetId: 'joes-plumbing-van', role: 'hero' },
       publishDate: '2026-05-22',
       seo: 'Hot water cylinder warning signs',
     },

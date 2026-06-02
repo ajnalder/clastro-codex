@@ -13,6 +13,7 @@ export const plumberContract: ContentContract = {
         { id: 'slug', label: 'Slug', primitive: 'shortText', required: true },
         { id: 'summary', label: 'Summary', primitive: 'richText', required: true },
         { id: 'heroImage', label: 'Hero Image', primitive: 'image', required: false },
+        { id: 'gallery', label: 'Image Gallery', primitive: 'sortableGallery', required: false },
         { id: 'seo', label: 'SEO Metadata', primitive: 'seoMetadata', required: true },
       ],
       extraSectionTypes: [
