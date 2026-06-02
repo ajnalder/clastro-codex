@@ -1,5 +1,6 @@
 ---
 import { plumberContract } from '../contracts';
+import { demoContentStore } from '../cms/demo-store';
 import { plumberItems, plumberMediaAssets, plumberPages } from '../cms/sample-content';
 import { createCmsViewModel, type CmsFieldView } from '../cms/view-model';
 import '../styles/cms.css';
@@ -11,13 +12,19 @@ const selectedCollectionId = Astro.url.searchParams.get('collection') ?? undefin
 const selectedItemId = Astro.url.searchParams.get('item') ?? undefined;
 const selectedPageId = Astro.url.searchParams.get('page') ?? undefined;
 const mode = selectedView === 'media' ? 'media' : selectedView === 'pages' || selectedPageId ? 'pages' : 'collections';
+const storedMediaAssets = await demoContentStore.listMediaAssets('joes-plumbing');
+const storedMediaAssetIds = new Set(storedMediaAssets.map((asset) => asset.assetId));
+const mediaAssets = [
+  ...storedMediaAssets,
+  ...plumberMediaAssets.filter((asset) => !storedMediaAssetIds.has(asset.assetId)),
+];
 
 const model = createCmsViewModel(plumberContract, plumberItems, {
   mode,
   selectedCollectionId,
   selectedItemId,
   selectedPageId,
-}, plumberPages, plumberMediaAssets);
+}, plumberPages, mediaAssets);
 
 const activeCollection = model.activeCollection;
 const activeItem = model.activeItem;
