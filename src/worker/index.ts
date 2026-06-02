@@ -1,4 +1,5 @@
 import { D1ContentStore } from '../content-store/d1-store';
+import { R2MediaStorage } from '../media/storage';
 import type { Env } from './env';
 import { handleApiRequest } from './routes';
 
@@ -7,7 +8,7 @@ export default {
     const url = new URL(request.url);
 
     if (url.pathname.startsWith('/api/')) {
-      return handleApiRequest(request, new D1ContentStore(env.CLASTRO_DB));
+      return handleApiRequest(request, new D1ContentStore(env.CLASTRO_DB), new R2MediaStorage(env.CLASTRO_MEDIA));
     }
 
     return new Response('Clastro Codex Worker', {

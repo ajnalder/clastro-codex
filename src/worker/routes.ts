@@ -1,12 +1,19 @@
 import { createPublishedSnapshot } from '../content-store/snapshot';
 import type { ContentStore, SaveDraftInput, SavePageRegionDraftInput } from '../content-store/types';
+import type { MediaStorage } from '../media/storage';
+import type { MediaVariantId } from '../media/types';
+import { createMediaVariantManifest } from '../media/variants';
 import { errorResponse, jsonResponse } from './response';
 
 async function readJson<T>(request: Request): Promise<T> {
   return (await request.json()) as T;
 }
 
-export async function handleApiRequest(request: Request, store: ContentStore): Promise<Response> {
+export async function handleApiRequest(
+  request: Request,
+  store: ContentStore,
+  mediaStorage?: MediaStorage,
+): Promise<Response> {
   const url = new URL(request.url);
 
   if (request.method === 'POST' && url.pathname === '/api/items/draft') {
@@ -64,6 +71,93 @@ export async function handleApiRequest(request: Request, store: ContentStore): P
     }>(request);
     return jsonResponse({
       regions: await store.publishPageRegionDrafts(input.siteId, input.pageId, input.updatedBy),
+    });
+  }
+
+  if (url.pathname === '/api/media') {
+    if (request.method === 'GET') {
+      const siteId = url.searchParams.get('siteId');
+      if (!siteId) {
+        return errorResponse('Missing siteId query parameter');
+      }
+      return jsonResponse({ assets: await store.listMediaAssets(siteId) });
+    }
+
+    if (request.method === 'POST') {
+      if (!mediaStorage) {
+        return errorResponse('Media storage is not configured', 500);
+      }
+      const form = await request.formData();
+      const siteId = String(form.get('siteId') ?? '');
+      if (!siteId) {
+        return errorResponse('Missing siteId');
+      }
+      const width = Number(form.get('width'));
+      const height = Number(form.get('height'));
+      if (!Number.isFinite(width) || !Number.isFinite(height) || width <= 0 || height <= 0) {
+        return errorResponse('Invalid image dimensions');
+      }
+      const assetId = crypto.randomUUID();
+      const bytesByVariant = JSON.parse(String(form.get('bytesByVariant') ?? '{}')) as Record<MediaVariantId, number>;
+      const variants = createMediaVariantManifest({
+        siteId,
+        assetId,
+        sourceSize: { width, height },
+        bytesByVariant,
+      });
+
+      for (const variantId of ['thumb', 'card', 'large'] as const) {
+        const blob = form.get(variantId);
+        if (!(blob instanceof Blob)) {
+          return errorResponse(`Missing ${variantId} image variant`);
+        }
+        await mediaStorage.put(variants[variantId].r2Key, blob);
+      }
+
+      return jsonResponse(await store.saveMediaAsset({
+        siteId,
+        assetId,
+        filename: String(form.get('filename') ?? 'image.webp'),
+        altText: String(form.get('altText') ?? ''),
+        caption: String(form.get('caption') ?? ''),
+        width,
+        height,
+        variants,
+      }));
+    }
+  }
+
+  const mediaUpdateMatch = url.pathname.match(/^\/api\/media\/([^/]+)$/);
+  if (mediaUpdateMatch && request.method === 'PATCH') {
+    const input = await readJson<{ siteId: string; altText: string; caption: string }>(request);
+    return jsonResponse(await store.updateMediaAssetMetadata({
+      siteId: input.siteId,
+      assetId: mediaUpdateMatch[1],
+      altText: input.altText,
+      caption: input.caption,
+    }));
+  }
+
+  const mediaVariantMatch = url.pathname.match(/^\/api\/media\/([^/]+)\/(thumb|card|large)$/);
+  if (mediaVariantMatch && request.method === 'GET') {
+    if (!mediaStorage) {
+      return errorResponse('Media storage is not configured', 500);
+    }
+    const siteId = url.searchParams.get('siteId') ?? 'joes-plumbing';
+    const asset = (await store.listMediaAssets(siteId)).find((candidate) => candidate.assetId === mediaVariantMatch[1]);
+    if (!asset) {
+      return errorResponse('Media asset not found', 404);
+    }
+    const variantId = mediaVariantMatch[2] as MediaVariantId;
+    const object = await mediaStorage.get(asset.variants[variantId].r2Key);
+    if (!object) {
+      return errorResponse('Media variant not found', 404);
+    }
+    return new Response(object.body, {
+      headers: {
+        'content-type': object.contentType,
+        'cache-control': 'public, max-age=31536000, immutable',
+      },
     });
   }
 

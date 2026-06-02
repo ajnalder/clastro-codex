@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { MemoryContentStore } from '../../src/content-store/memory-store';
+import { MemoryMediaStorage } from '../../src/media/storage';
 import { handleApiRequest } from '../../src/worker/routes';
 
 describe('handleApiRequest', () => {
@@ -152,5 +153,65 @@ describe('handleApiRequest', () => {
         },
       ],
     });
+  });
+
+  it('creates, lists, updates, and serves media assets through the API', async () => {
+    const store = new MemoryContentStore();
+    const storage = new MemoryMediaStorage();
+    const form = new FormData();
+    form.set('siteId', 'joes-plumbing');
+    form.set('filename', 'van.webp');
+    form.set('altText', "Joe's Plumbing van");
+    form.set('caption', 'Service van');
+    form.set('width', '1200');
+    form.set('height', '800');
+    form.set('bytesByVariant', JSON.stringify({ thumb: 10, card: 20, large: 30 }));
+    form.set('thumb', new Blob(['thumb'], { type: 'image/webp' }));
+    form.set('card', new Blob(['card'], { type: 'image/webp' }));
+    form.set('large', new Blob(['large'], { type: 'image/webp' }));
+
+    const createResponse = await handleApiRequest(
+      new Request('https://cms.test/api/media', { method: 'POST', body: form }),
+      store,
+      storage,
+    );
+    const created = await createResponse.json() as { assetId: string };
+    const updateResponse = await handleApiRequest(
+      new Request(`https://cms.test/api/media/${created.assetId}`, {
+        method: 'PATCH',
+        body: JSON.stringify({
+          siteId: 'joes-plumbing',
+          altText: 'Updated van alt',
+          caption: 'Updated van caption',
+        }),
+      }),
+      store,
+      storage,
+    );
+    const listResponse = await handleApiRequest(
+      new Request('https://cms.test/api/media?siteId=joes-plumbing'),
+      store,
+      storage,
+    );
+    const variantResponse = await handleApiRequest(
+      new Request(`https://cms.test/api/media/${created.assetId}/thumb?siteId=joes-plumbing`),
+      store,
+      storage,
+    );
+
+    expect(createResponse.status).toBe(200);
+    expect(updateResponse.status).toBe(200);
+    await expect(listResponse.json()).resolves.toMatchObject({
+      assets: [
+        expect.objectContaining({
+          filename: 'van.webp',
+          altText: 'Updated van alt',
+          caption: 'Updated van caption',
+        }),
+      ],
+    });
+    expect(variantResponse.status).toBe(200);
+    expect(variantResponse.headers.get('content-type')).toBe('image/webp');
+    await expect(variantResponse.text()).resolves.toBe('thumb');
   });
 });
