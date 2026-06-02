@@ -6,6 +6,12 @@ const targets: Array<{ id: MediaVariantId; maxWidth: number; quality: number }> 
   { id: 'large', maxWidth: 1800, quality: 0.84 },
 ];
 
+const supportedImageTypes = new Set(['image/jpeg', 'image/png', 'image/webp']);
+
+export function isSupportedImageType(contentType: string): boolean {
+  return supportedImageTypes.has(contentType);
+}
+
 function scaleToWidth(size: ImageSize, maxWidth: number): ImageSize {
   const width = Math.min(size.width, maxWidth);
   return {

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { createMediaVariantManifest, planImageVariants } from '../../src/media/variants';
+import { createMediaVariantManifest, isSupportedImageType, planImageVariants } from '../../src/media/variants';
 
 describe('planImageVariants', () => {
   it('preserves aspect ratio and does not upscale small images', () => {
@@ -28,5 +28,12 @@ describe('planImageVariants', () => {
         contentType: 'image/webp',
       },
     });
+  });
+
+  it('accepts jpeg, png, and webp image uploads only', () => {
+    expect(isSupportedImageType('image/jpeg')).toBe(true);
+    expect(isSupportedImageType('image/png')).toBe(true);
+    expect(isSupportedImageType('image/webp')).toBe(true);
+    expect(isSupportedImageType('image/gif')).toBe(false);
   });
 });
