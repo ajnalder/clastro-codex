@@ -77,7 +77,7 @@ function isMultiline(field: CmsFieldView) {
           <p class="cms-kicker">Assets</p>
           <a class:list={['cms-nav-item', { 'is-active': isMediaMode }]} href="/cms?view=media">
             <span>Media</span>
-            <small>{model.mediaAssets.length}</small>
+            <small data-media-count>{model.mediaAssets.length}</small>
           </a>
         </nav>
 
@@ -96,9 +96,9 @@ function isMultiline(field: CmsFieldView) {
               <p>Optimized images stored for website use.</p>
             </div>
 
-            <div class="cms-item-list">
+            <div class="cms-item-list" data-media-asset-list>
               {model.mediaAssets.map((asset) => (
-                <a class="cms-item-row" href={`#media-${asset.assetId}`}>
+                <a class="cms-item-row" href={`#media-${asset.assetId}`} data-media-asset-row={asset.assetId}>
                   <span>
                     <strong>{asset.filename}</strong>
                     <small>{asset.width} x {asset.height}</small>
@@ -403,7 +403,7 @@ function isMultiline(field: CmsFieldView) {
               <>
                 <div>
                   <dt>Assets</dt>
-                  <dd>{model.mediaAssets.length}</dd>
+                  <dd data-media-count>{model.mediaAssets.length}</dd>
                 </div>
                 <div>
                   <dt>Format</dt>
