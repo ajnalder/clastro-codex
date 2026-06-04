@@ -859,7 +859,16 @@ function isGalleryField(field: CmsFieldView) {
                           ))}
                         </div>
                       </div>
-                      <textarea class="cms-input cms-textarea cms-blog-body-editor" id={`blog-${activeBlogPost.bodyField.id}`} data-field={activeBlogPost.bodyField.id}>{activeBlogPost.bodyField.value}</textarea>
+                      <div
+                        class="cms-blog-body-editor cms-richtext-canvas"
+                        id={`blog-${activeBlogPost.bodyField.id}`}
+                        contenteditable="true"
+                        role="textbox"
+                        aria-multiline="true"
+                        aria-label="Article body"
+                        data-richtext-editor={activeBlogPost.bodyField.id}
+                      ></div>
+                      <textarea class="cms-blog-body-storage" data-field={activeBlogPost.bodyField.id} data-richtext-storage={activeBlogPost.bodyField.id} hidden>{activeBlogPost.bodyField.value}</textarea>
                     </div>
                     <small>Use headings, lists, links, and inline images in the article body. Images should come from the optimized Media library.</small>
                   </div>

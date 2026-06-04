@@ -39,5 +39,8 @@ describe('CMS visual brand shell', () => {
     expect(cmsPage).toContain('data-richtext-format="h2"');
     expect(cmsPage).toContain('data-richtext-format="h3"');
     expect(cmsPage).toContain('data-richtext-image-picker-open={activeBlogPost.bodyField.id}');
+    expect(cmsPage).toContain('contenteditable="true"');
+    expect(cmsPage).toContain('data-richtext-editor={activeBlogPost.bodyField.id}');
+    expect(cmsPage).toContain('data-richtext-storage={activeBlogPost.bodyField.id}');
   });
 });

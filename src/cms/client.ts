@@ -53,6 +53,7 @@ const mediaAltInput = document.querySelector<HTMLInputElement>('[data-media-alt]
 const mediaCaptionInput = document.querySelector<HTMLInputElement>('[data-media-caption]');
 const mediaMetadataTimers = new Map<string, number>();
 const mediaLibrary = new Map<string, CmsClientMediaAsset>();
+const richTextSelections = new Map<string, Range>();
 const mediaLibraryJson = root?.dataset.mediaLibrary ?? '[]';
 const galleryIcons = {
   Bold,
@@ -485,44 +486,237 @@ function filterPickerOptions(input: HTMLInputElement): void {
   });
 }
 
+function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+function unescapeMarkerValue(value: string): string {
+  return value.replace(/\\"/g, '"').replace(/\\\\/g, '\\');
+}
+
 function getRichTextTextarea(fieldId: string): HTMLTextAreaElement | null {
   return document.querySelector<HTMLTextAreaElement>(`textarea[data-field="${CSS.escape(fieldId)}"]`);
 }
 
-function replaceTextareaSelection(textarea: HTMLTextAreaElement, replacement: string): void {
-  const start = textarea.selectionStart ?? textarea.value.length;
-  const end = textarea.selectionEnd ?? start;
-  textarea.value = `${textarea.value.slice(0, start)}${replacement}${textarea.value.slice(end)}`;
-  const cursorPosition = start + replacement.length;
-  textarea.focus();
-  textarea.setSelectionRange(cursorPosition, cursorPosition);
+function getRichTextEditor(fieldId: string): HTMLElement | null {
+  return document.querySelector<HTMLElement>(`[data-richtext-editor="${CSS.escape(fieldId)}"]`);
 }
 
-function wrapTextareaSelection(textarea: HTMLTextAreaElement, prefix: string, suffix: string, fallback: string): void {
-  const start = textarea.selectionStart ?? textarea.value.length;
-  const end = textarea.selectionEnd ?? start;
-  const selectedText = textarea.value.slice(start, end) || fallback;
-  textarea.value = `${textarea.value.slice(0, start)}${prefix}${selectedText}${suffix}${textarea.value.slice(end)}`;
-  textarea.focus();
-  textarea.setSelectionRange(start + prefix.length, start + prefix.length + selectedText.length);
+function getRichTextStorage(fieldId: string): HTMLTextAreaElement | null {
+  return document.querySelector<HTMLTextAreaElement>(`[data-richtext-storage="${CSS.escape(fieldId)}"]`);
 }
 
-function formatSelectedLines(textarea: HTMLTextAreaElement, formatter: (line: string, index: number) => string, fallback: string): void {
-  const start = textarea.selectionStart ?? textarea.value.length;
-  const end = textarea.selectionEnd ?? start;
-  const selectedText = textarea.value.slice(start, end) || fallback;
-  const formatted = selectedText
-    .split('\n')
-    .map((line, index) => formatter(line.replace(/^(#{2,3}|[-*]|\d+\.)\s+/, ''), index))
-    .join('\n');
-  textarea.value = `${textarea.value.slice(0, start)}${formatted}${textarea.value.slice(end)}`;
-  textarea.focus();
-  textarea.setSelectionRange(start, start + formatted.length);
+function getAssetLabel(asset: CmsClientMediaAsset | undefined, fallback: string): string {
+  return asset?.caption || asset?.altText || asset?.filename || fallback;
+}
+
+function createRichTextImageHtml(assetId: string, caption = ''): string {
+  const asset = mediaLibrary.get(assetId);
+  const preview = asset ? getAssetPreview(asset) : null;
+  const label = getAssetLabel(asset, caption || assetId);
+  const image = preview
+    ? `<img src="${escapeHtml(preview.url)}" alt="${escapeHtml(asset?.altText ?? label)}" width="${preview.width}" height="${preview.height}" />`
+    : `<strong>${escapeHtml(assetId)}</strong>`;
+
+  return [
+    `<figure class="cms-richtext-image" contenteditable="false" data-richtext-media="${escapeHtml(assetId)}">`,
+    image,
+    `<figcaption>${escapeHtml(label)}</figcaption>`,
+    '</figure>',
+    '<p><br></p>',
+  ].join('');
+}
+
+function renderInlineRichText(value: string): string {
+  return escapeHtml(value)
+    .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+    .replace(/\*([^*]+)\*/g, '<em>$1</em>')
+    .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2">$1</a>');
+}
+
+function renderLegacyMediaMarkers(value: string): string {
+  return value.replace(
+    /\[media:image\s+assetId="((?:\\"|[^"])*)"(?:\s+caption="((?:\\"|[^"])*)")?\]/g,
+    (_match, assetId: string, caption = '') => createRichTextImageHtml(unescapeMarkerValue(assetId), unescapeMarkerValue(caption)),
+  );
+}
+
+function renderStoredRichText(value: string): string {
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return '<p><br></p>';
+  }
+  if (/<(p|h2|h3|ul|ol|li|figure|strong|em|a|div|br)\b/i.test(trimmed)) {
+    return renderLegacyMediaMarkers(trimmed);
+  }
+
+  return trimmed
+    .split(/\n{2,}/)
+    .map((block) => {
+      const lines = block.split('\n');
+      if (lines.every((line) => /^-\s+/.test(line))) {
+        return `<ul>${lines.map((line) => `<li>${renderInlineRichText(line.replace(/^-\s+/, ''))}</li>`).join('')}</ul>`;
+      }
+      if (lines.every((line) => /^\d+\.\s+/.test(line))) {
+        return `<ol>${lines.map((line) => `<li>${renderInlineRichText(line.replace(/^\d+\.\s+/, ''))}</li>`).join('')}</ol>`;
+      }
+      if (/^###\s+/.test(block)) {
+        return `<h3>${renderInlineRichText(block.replace(/^###\s+/, ''))}</h3>`;
+      }
+      if (/^##\s+/.test(block)) {
+        return `<h2>${renderInlineRichText(block.replace(/^##\s+/, ''))}</h2>`;
+      }
+      if (/^\[media:image\s+/.test(block)) {
+        return renderLegacyMediaMarkers(block);
+      }
+      return `<p>${renderInlineRichText(block).replace(/\n/g, '<br />')}</p>`;
+    })
+    .join('');
+}
+
+function syncRichTextStorage(editor: HTMLElement): void {
+  const fieldId = editor.dataset.richtextEditor;
+  if (!fieldId) return;
+  const storage = getRichTextStorage(fieldId);
+  if (!storage) return;
+  storage.value = editor.innerHTML.trim();
+}
+
+function syncRichTextAndSave(editor: HTMLElement): void {
+  syncRichTextStorage(editor);
+  scheduleItemDraftSave();
+}
+
+function selectionIsInside(editor: HTMLElement): boolean {
+  const selection = window.getSelection();
+  if (!selection?.rangeCount) return false;
+  const anchor = selection.anchorNode;
+  return Boolean(anchor && editor.contains(anchor));
+}
+
+function getEditorForSelection(): HTMLElement | null {
+  const selection = window.getSelection();
+  if (!selection?.rangeCount) return null;
+  const anchor = selection.anchorNode;
+  const element = anchor instanceof Element ? anchor : anchor?.parentElement;
+  return element?.closest<HTMLElement>('[data-richtext-editor]') ?? null;
+}
+
+function rememberRichTextSelection(): void {
+  const editor = getEditorForSelection();
+  const fieldId = editor?.dataset.richtextEditor;
+  const selection = window.getSelection();
+  if (!editor || !fieldId || !selection?.rangeCount) return;
+  richTextSelections.set(fieldId, selection.getRangeAt(0).cloneRange());
+}
+
+function restoreRichTextSelection(editor: HTMLElement): boolean {
+  const fieldId = editor.dataset.richtextEditor;
+  const range = fieldId ? richTextSelections.get(fieldId) : null;
+  if (!range || !editor.contains(range.commonAncestorContainer)) {
+    return false;
+  }
+  const selection = window.getSelection();
+  selection?.removeAllRanges();
+  selection?.addRange(range);
+  return true;
+}
+
+function getActiveRichTextRange(editor: HTMLElement): Range | null {
+  const selection = window.getSelection();
+  if (selection?.rangeCount) {
+    const range = selection.getRangeAt(0);
+    if (editor.contains(range.commonAncestorContainer)) {
+      return range;
+    }
+  }
+
+  const fieldId = editor.dataset.richtextEditor;
+  const savedRange = fieldId ? richTextSelections.get(fieldId) : null;
+  return savedRange && editor.contains(savedRange.commonAncestorContainer) ? savedRange : null;
+}
+
+function wrapRichTextSelection(editor: HTMLElement, tagName: 'strong' | 'em'): boolean {
+  const range = getActiveRichTextRange(editor);
+  if (!range || range.collapsed) {
+    return false;
+  }
+
+  const selectedContent = range.extractContents();
+  const replacement = document.createDocumentFragment();
+  const blockTags = new Set(['P', 'H2', 'H3', 'LI']);
+  const selectedNodes = [...selectedContent.childNodes];
+  const wrapsWholeBlocks =
+    selectedNodes.length > 0 &&
+    selectedNodes.every((node) => node instanceof HTMLElement && blockTags.has(node.tagName));
+
+  if (wrapsWholeBlocks) {
+    for (const node of selectedNodes) {
+      const block = node as HTMLElement;
+      const wrapper = document.createElement(tagName);
+      for (const childNode of Array.from(block.childNodes)) {
+        wrapper.appendChild(childNode);
+      }
+      block.appendChild(wrapper);
+      replacement.appendChild(block);
+    }
+  } else {
+    const wrapper = document.createElement(tagName);
+    wrapper.appendChild(selectedContent);
+    replacement.appendChild(wrapper);
+  }
+
+  const firstInsertedNode = replacement.firstChild;
+  range.insertNode(replacement);
+
+  const selection = window.getSelection();
+  const nextRange = document.createRange();
+  if (firstInsertedNode) {
+    nextRange.selectNodeContents(firstInsertedNode);
+    selection?.removeAllRanges();
+    selection?.addRange(nextRange);
+  }
+  rememberRichTextSelection();
+  return true;
+}
+
+function placeCursorAtEditorEnd(editor: HTMLElement): void {
+  const range = document.createRange();
+  range.selectNodeContents(editor);
+  range.collapse(false);
+  const selection = window.getSelection();
+  selection?.removeAllRanges();
+  selection?.addRange(range);
+}
+
+function focusRichTextEditor(editor: HTMLElement): void {
+  editor.focus();
+  if (!selectionIsInside(editor) && !restoreRichTextSelection(editor)) {
+    placeCursorAtEditorEnd(editor);
+  }
 }
 
 function insertRichTextImage(fieldId: string, assetId: string | null | undefined): void {
+  if (!assetId) {
+    setStatus('Choose an image', 'Select a media asset before inserting it into rich text.', true);
+    return;
+  }
+
+  const editor = getRichTextEditor(fieldId);
+  if (editor) {
+    focusRichTextEditor(editor);
+    document.execCommand('insertHTML', false, createRichTextImageHtml(assetId, mediaLibrary.get(assetId)?.caption ?? ''));
+    syncRichTextAndSave(editor);
+    setStatus('Image inserted', 'The article body now shows the selected media image.', true);
+    return;
+  }
+
   const textarea = getRichTextTextarea(fieldId);
-  if (!assetId || !textarea) {
+  if (!textarea) {
     setStatus('Choose an image', 'Select a media asset before inserting it into rich text.', true);
     return;
   }
@@ -531,34 +725,38 @@ function insertRichTextImage(fieldId: string, assetId: string | null | undefined
   textarea.value = insertRichTextImageMarker(textarea.value, marker, textarea.selectionStart ?? textarea.value.length);
   textarea.focus();
   scheduleItemDraftSave();
-  setStatus('Image inserted', 'The article body now references a media library image.', true);
+  setStatus('Image inserted', 'The rich text field now references a media library image.', true);
 }
 
 function applyRichTextFormat(fieldId: string, action: string): void {
-  const textarea = getRichTextTextarea(fieldId);
-  if (!textarea) return;
+  const editor = getRichTextEditor(fieldId);
+  if (!editor) return;
 
+  focusRichTextEditor(editor);
   if (action === 'h2') {
-    formatSelectedLines(textarea, (line) => `## ${line || 'Section heading'}`, 'Section heading');
+    document.execCommand('formatBlock', false, 'h2');
   } else if (action === 'h3') {
-    formatSelectedLines(textarea, (line) => `### ${line || 'Subheading'}`, 'Subheading');
+    document.execCommand('formatBlock', false, 'h3');
   } else if (action === 'bold') {
-    wrapTextareaSelection(textarea, '**', '**', 'bold text');
+    if (!wrapRichTextSelection(editor, 'strong')) {
+      document.execCommand('bold');
+    }
   } else if (action === 'italic') {
-    wrapTextareaSelection(textarea, '*', '*', 'italic text');
+    if (!wrapRichTextSelection(editor, 'em')) {
+      document.execCommand('italic');
+    }
   } else if (action === 'bullet') {
-    formatSelectedLines(textarea, (line) => `- ${line || 'List item'}`, 'List item');
+    document.execCommand('insertUnorderedList');
   } else if (action === 'numbered') {
-    formatSelectedLines(textarea, (line, index) => `${index + 1}. ${line || 'List item'}`, 'List item');
+    document.execCommand('insertOrderedList');
   } else if (action === 'link') {
-    const selectedText = textarea.value.slice(textarea.selectionStart ?? 0, textarea.selectionEnd ?? 0) || 'link text';
     const href = window.prompt('Paste the link URL');
     if (!href) return;
-    replaceTextareaSelection(textarea, `[${selectedText}](${href})`);
+    document.execCommand('createLink', false, href);
   }
 
-  scheduleItemDraftSave();
-  setStatus('Article updated', 'Formatting has been added to the blog body.', true);
+  syncRichTextAndSave(editor);
+  setStatus('Article updated', 'Formatting has been applied in the article body.', true);
 }
 
 document.addEventListener('click', (event) => {
@@ -601,6 +799,24 @@ document.addEventListener('input', (event) => {
   if (input) {
     filterPickerOptions(input);
   }
+});
+
+document.addEventListener('input', (event) => {
+  const editor = (event.target as HTMLElement | null)?.closest<HTMLElement>('[data-richtext-editor]');
+  if (!editor) return;
+  syncRichTextAndSave(editor);
+});
+
+document.addEventListener('mousedown', (event) => {
+  const button = (event.target as HTMLElement | null)?.closest<HTMLButtonElement>('[data-richtext-format], [data-richtext-image-picker-open]');
+  if (button) {
+    rememberRichTextSelection();
+    event.preventDefault();
+  }
+});
+
+document.addEventListener('selectionchange', () => {
+  rememberRichTextSelection();
 });
 
 function updateImageUploadHelper(fieldId: string, text: string): void {
@@ -945,7 +1161,18 @@ document.addEventListener('click', (event) => {
   insertRichTextImage(fieldId, select?.value);
 });
 
+function initializeRichTextEditors(): void {
+  document.querySelectorAll<HTMLElement>('[data-richtext-editor]').forEach((editor) => {
+    const fieldId = editor.dataset.richtextEditor;
+    if (!fieldId) return;
+    const storage = getRichTextStorage(fieldId);
+    editor.innerHTML = renderStoredRichText(storage?.value ?? '');
+    syncRichTextStorage(editor);
+  });
+}
+
 initializeSyncedGalleryImages();
+initializeRichTextEditors();
 renderIcons();
 
 async function uploadSelectedMedia(): Promise<void> {
