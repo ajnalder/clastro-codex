@@ -6,7 +6,8 @@ import {
   type GalleryFieldValue,
   type ImageFieldValue,
 } from './media-field-values';
-import type { CmsSampleItem, CmsSamplePage } from './sample-content';
+import { createSiteAccessView, type CmsSiteAccessView, type CmsUserAccount } from './auth';
+import type { CmsSampleItem, CmsSamplePage, CmsSiteSettings } from './sample-content';
 
 export interface CmsNavigationItem {
   id: string;
@@ -90,20 +91,30 @@ export interface CmsMediaAssetView {
 }
 
 export interface CmsViewModel {
-  activeMode: 'collections' | 'pages' | 'media';
+  activeMode: CmsMode;
   navigation: CmsNavigationItem[];
   pageNavigation: CmsPageNavigationItem[];
   activeCollection: CmsCollectionView | null;
   activeItem: CmsItemView | null;
   activePage: CmsPageView | null;
   mediaAssets: CmsMediaAssetView[];
+  siteSettings: CmsSiteSettings | null;
+  auth: CmsSiteAccessView;
 }
 
+export type CmsMode = 'collections' | 'pages' | 'media' | 'settings' | 'users';
+
 interface Selection {
-  mode?: 'collections' | 'pages' | 'media';
+  mode?: CmsMode;
   selectedCollectionId?: string;
   selectedItemId?: string;
   selectedPageId?: string;
+}
+
+interface CmsViewModelOptions {
+  siteSettings?: CmsSiteSettings;
+  users?: CmsUserAccount[];
+  currentUserId?: string;
 }
 
 const pageSettingsFields: FieldDefinition[] = [
@@ -223,9 +234,12 @@ export function createCmsViewModel(
   selection: Selection = {},
   pages: CmsSamplePage[] = [],
   mediaAssets: MediaAsset[] = [],
+  options: CmsViewModelOptions = {},
 ): CmsViewModel {
   const activeMode = selection.mode ?? (selection.selectedPageId ? 'pages' : 'collections');
   const mediaAssetViews = mediaAssets.map(createMediaAssetView);
+  const auth = createSiteAccessView(options.users ?? [], options.currentUserId ?? '');
+  const siteSettings = options.siteSettings ?? null;
 
   const activeCollectionDefinition =
     contract.collections.find((collection) => collection.id === selection.selectedCollectionId) ??
@@ -251,7 +265,7 @@ export function createCmsViewModel(
     active: activeMode === 'pages' && page.id === activePageDefinition?.id,
   }));
 
-  if (activeMode === 'media') {
+  if (activeMode === 'media' || activeMode === 'settings' || activeMode === 'users') {
     return {
       activeMode,
       navigation,
@@ -260,6 +274,8 @@ export function createCmsViewModel(
       activeItem: null,
       activePage: null,
       mediaAssets: mediaAssetViews,
+      siteSettings,
+      auth,
     };
   }
 
@@ -272,6 +288,8 @@ export function createCmsViewModel(
       activeItem: null,
       activePage: activePageDefinition && selectedPage ? createPageView(activePageDefinition, selectedPage, mediaAssetViews) : null,
       mediaAssets: mediaAssetViews,
+      siteSettings,
+      auth,
     };
   }
 
@@ -300,6 +318,8 @@ export function createCmsViewModel(
       activeItem: null,
       activePage: null,
       mediaAssets: mediaAssetViews,
+      siteSettings,
+      auth,
     };
   }
 
@@ -330,5 +350,7 @@ export function createCmsViewModel(
     activeItem,
     activePage,
     mediaAssets: mediaAssetViews,
+    siteSettings,
+    auth,
   };
 }

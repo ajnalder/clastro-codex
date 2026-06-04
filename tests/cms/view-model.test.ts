@@ -8,6 +8,7 @@ import {
   plumberPages,
 } from '../../src/cms/sample-content';
 import { createCmsViewModel } from '../../src/cms/view-model';
+import { demoSiteSettings, demoUsers } from '../../src/cms/sample-content';
 
 describe('createCmsViewModel', () => {
   it('creates collection navigation from the contract labels', () => {
@@ -111,6 +112,40 @@ describe('createCmsViewModel', () => {
         altText: "Joe's Plumbing van beside pipework",
       }),
     ]);
+  });
+
+  it('creates settings and users modes with visible signed-in access', () => {
+    const settingsModel = createCmsViewModel(
+      plumberContract,
+      plumberItems,
+      { mode: 'settings' },
+      plumberPages,
+      plumberMediaAssets,
+      {
+        siteSettings: demoSiteSettings,
+        users: demoUsers,
+        currentUserId: 'andrew-nalder',
+      },
+    );
+    const usersModel = createCmsViewModel(
+      plumberContract,
+      plumberItems,
+      { mode: 'users' },
+      plumberPages,
+      plumberMediaAssets,
+      {
+        siteSettings: demoSiteSettings,
+        users: demoUsers,
+        currentUserId: 'andrew-nalder',
+      },
+    );
+
+    expect(settingsModel.activeMode).toBe('settings');
+    expect(settingsModel.siteSettings?.siteName).toBe("Joe's Plumbing");
+    expect(settingsModel.auth.currentUser?.roleLabel).toBe('Super admin');
+    expect(usersModel.activeMode).toBe('users');
+    expect(usersModel.auth.users.map((user) => user.accessLabel)).toContain('Visible support access');
+    expect(usersModel.auth.canManageUsers).toBe(true);
   });
 
   it('resolves image fields to media previews', () => {

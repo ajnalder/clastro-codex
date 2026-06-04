@@ -1,7 +1,7 @@
 ---
 import { plumberContract } from '../contracts';
 import { demoContentStore } from '../cms/demo-store';
-import { plumberItems, plumberMediaAssets, plumberPages } from '../cms/sample-content';
+import { demoSiteSettings, demoUsers, plumberItems, plumberMediaAssets, plumberPages } from '../cms/sample-content';
 import { createCmsViewModel, type CmsFieldView } from '../cms/view-model';
 import '../styles/cms.css';
 
@@ -11,7 +11,16 @@ const selectedView = Astro.url.searchParams.get('view');
 const selectedCollectionId = Astro.url.searchParams.get('collection') ?? undefined;
 const selectedItemId = Astro.url.searchParams.get('item') ?? undefined;
 const selectedPageId = Astro.url.searchParams.get('page') ?? undefined;
-const mode = selectedView === 'media' ? 'media' : selectedView === 'pages' || selectedPageId ? 'pages' : 'collections';
+const mode =
+  selectedView === 'media'
+    ? 'media'
+    : selectedView === 'settings'
+    ? 'settings'
+    : selectedView === 'users'
+    ? 'users'
+    : selectedView === 'pages' || selectedPageId
+    ? 'pages'
+    : 'collections';
 const selectedCollectionForDraft = selectedCollectionId ?? plumberContract.collections[0]?.id;
 const selectedItemForDraft =
   selectedItemId ?? plumberItems.find((item) => item.collectionId === selectedCollectionForDraft)?.itemId;
@@ -44,16 +53,32 @@ const model = createCmsViewModel(plumberContract, items, {
   selectedCollectionId,
   selectedItemId: selectedItemForDraft,
   selectedPageId,
-}, plumberPages, mediaAssets);
+}, plumberPages, mediaAssets, {
+  siteSettings: demoSiteSettings,
+  users: demoUsers,
+  currentUserId: 'andrew-nalder',
+});
 
 const activeCollection = model.activeCollection;
 const activeItem = model.activeItem;
 const activePage = model.activePage;
 const isPagesMode = model.activeMode === 'pages';
 const isMediaMode = model.activeMode === 'media';
+const isSettingsMode = model.activeMode === 'settings';
+const isUsersMode = model.activeMode === 'users';
 const activeStatus = isPagesMode ? activePage?.status : activeItem?.status;
-const statusLabel = isMediaMode ? 'Media library' : activeStatus === 'published' ? 'Published' : 'Saved draft';
+const statusLabel =
+  isMediaMode
+    ? 'Media library'
+    : isSettingsMode
+    ? 'Site settings'
+    : isUsersMode
+    ? 'User access'
+    : activeStatus === 'published'
+    ? 'Published'
+    : 'Saved draft';
 const mediaLibraryJson = JSON.stringify(model.mediaAssets);
+const currentUser = model.auth.currentUser;
 
 const multilinePrimitives = new Set(['richText', 'longText', 'seoMetadata', 'table', 'faqList', 'callout']);
 
@@ -117,13 +142,33 @@ function isGalleryField(field: CmsFieldView) {
           </a>
         </nav>
 
+        <nav class="cms-nav" aria-label="Admin">
+          <p class="cms-kicker">Admin</p>
+          <a class:list={['cms-nav-item', { 'is-active': isSettingsMode }]} href="/cms?view=settings">
+            <span>Settings</span>
+            <small>site</small>
+          </a>
+          <a class:list={['cms-nav-item', { 'is-active': isUsersMode }]} href="/cms?view=users">
+            <span>Users</span>
+            <small>{model.auth.users.length}</small>
+          </a>
+        </nav>
+
+        {currentUser && (
+          <div class="cms-user-badge">
+            <p class="cms-kicker">Signed in</p>
+            <strong>{currentUser.name}</strong>
+            <span>{currentUser.roleLabel}</span>
+          </div>
+        )}
+
         <div class="cms-sidebar-note">
           <p class="cms-kicker">Framework rule</p>
           <p>The backend follows the client’s business language while the content contract keeps the plumbing consistent.</p>
         </div>
       </aside>
 
-      <section class="cms-list" aria-label={isMediaMode ? 'Media assets' : isPagesMode ? 'Pages' : 'Collection items'}>
+      <section class="cms-list" aria-label={isMediaMode ? 'Media assets' : isPagesMode ? 'Pages' : isSettingsMode ? 'Settings' : isUsersMode ? 'Users' : 'Collection items'}>
         {isMediaMode ? (
           <>
             <div class="cms-section-heading">
@@ -140,6 +185,51 @@ function isGalleryField(field: CmsFieldView) {
                     <small>{asset.width} x {asset.height}</small>
                   </span>
                   <em>{asset.largeBytesLabel}</em>
+                </a>
+              ))}
+            </div>
+          </>
+        ) : isSettingsMode ? (
+          <>
+            <div class="cms-section-heading">
+              <p class="cms-kicker">Site admin</p>
+              <h1>Settings</h1>
+              <p>Business, access, and integration settings for this site.</p>
+            </div>
+
+            <div class="cms-item-list">
+              <a class="cms-item-row is-active" href="/cms?view=settings">
+                <span>
+                  <strong>Site profile</strong>
+                  <small>{model.siteSettings?.domain}</small>
+                </span>
+                <em>settings</em>
+              </a>
+              <a class="cms-item-row" href="/cms?view=users">
+                <span>
+                  <strong>User access</strong>
+                  <small>{model.auth.users.length} visible users</small>
+                </span>
+                <em>users</em>
+              </a>
+            </div>
+          </>
+        ) : isUsersMode ? (
+          <>
+            <div class="cms-section-heading">
+              <p class="cms-kicker">Access</p>
+              <h1>Users</h1>
+              <p>Owners, editors, collaborators, and visible support access.</p>
+            </div>
+
+            <div class="cms-item-list">
+              {model.auth.users.map((user) => (
+                <a class="cms-item-row" href={`#user-${user.userId}`}>
+                  <span>
+                    <strong>{user.name}</strong>
+                    <small>{user.email}</small>
+                  </span>
+                  <em>{user.roleLabel}</em>
                 </a>
               ))}
             </div>
@@ -187,12 +277,22 @@ function isGalleryField(field: CmsFieldView) {
         )}
       </section>
 
-      <section class="cms-editor" aria-label={isMediaMode ? 'Media editor' : isPagesMode ? 'Page editor' : 'Item editor'}>
+      <section class="cms-editor" aria-label={isMediaMode ? 'Media editor' : isSettingsMode ? 'Settings editor' : isUsersMode ? 'Users editor' : isPagesMode ? 'Page editor' : 'Item editor'}>
         <header class="cms-editor-header">
           <div>
-            <p class="cms-kicker">{isMediaMode ? 'Media library' : isPagesMode ? 'Page settings' : 'Editing globally'}</p>
-            <h2>{isMediaMode ? 'Website images' : isPagesMode ? activePage?.label ?? 'Select a page' : activeItem?.label ?? 'Select an item'}</h2>
-            <p>{isMediaMode ? 'Upload optimized images, add alt text, and manage captions.' : isPagesMode ? activePage?.path : `${activeCollection?.label} / ${activeItem?.id}`}</p>
+            <p class="cms-kicker">{isMediaMode ? 'Media library' : isSettingsMode ? 'Site admin' : isUsersMode ? 'Access control' : isPagesMode ? 'Page settings' : 'Editing globally'}</p>
+            <h2>{isMediaMode ? 'Website images' : isSettingsMode ? model.siteSettings?.siteName ?? 'Site settings' : isUsersMode ? 'Users and roles' : isPagesMode ? activePage?.label ?? 'Select a page' : activeItem?.label ?? 'Select an item'}</h2>
+            <p>
+              {isMediaMode
+                ? 'Upload optimized images, add alt text, and manage captions.'
+                : isSettingsMode
+                ? 'Core business, domain, support access, and integration settings.'
+                : isUsersMode
+                ? 'Manage the people who can log in and edit this site.'
+                : isPagesMode
+                ? activePage?.path
+                : `${activeCollection?.label} / ${activeItem?.id}`}
+            </p>
           </div>
           <div class="cms-editor-actions">
             {isPagesMode && activePage && <a class="cms-button cms-button-secondary" href={activePage.editHref}>Edit page</a>}
@@ -247,6 +347,127 @@ function isGalleryField(field: CmsFieldView) {
                   </article>
                 ))}
               </div>
+            </section>
+          </form>
+        )}
+
+        {isSettingsMode && model.siteSettings && (
+          <form class="cms-form">
+            <section class="cms-field-section" aria-labelledby="site-settings-heading">
+              <div class="cms-subheading">
+                <p class="cms-kicker">Site profile</p>
+                <h3 id="site-settings-heading">Business details</h3>
+              </div>
+
+              <div class="cms-settings-grid">
+                <label class="cms-field">
+                  <span>Site name</span>
+                  <input class="cms-input" value={model.siteSettings.siteName} />
+                  <small>Shown in the CMS and internal site switcher.</small>
+                </label>
+                <label class="cms-field">
+                  <span>Business name</span>
+                  <input class="cms-input" value={model.siteSettings.businessName} />
+                  <small>Used for schema, invoices, and support context.</small>
+                </label>
+                <label class="cms-field">
+                  <span>Primary domain</span>
+                  <input class="cms-input" value={model.siteSettings.domain} />
+                  <small>The public domain for published pages.</small>
+                </label>
+                <label class="cms-field">
+                  <span>OpenAI API key</span>
+                  <input class="cms-input" value={model.siteSettings.openAiApiKeyStatus === 'connected' ? 'Connected' : 'Not connected'} readonly />
+                  <small>Used later for blog assistance only, using the client’s own key.</small>
+                </label>
+              </div>
+            </section>
+
+            <section class="cms-field-section" aria-labelledby="integration-settings-heading">
+              <div class="cms-subheading">
+                <p class="cms-kicker">Integrations</p>
+                <h3 id="integration-settings-heading">Analytics and search</h3>
+              </div>
+
+              <div class="cms-settings-grid">
+                <div class="cms-setting-card">
+                  <span>Google Analytics</span>
+                  <strong>{model.siteSettings.analyticsProperty}</strong>
+                  <small>For traffic, events, conversions, and page performance inside the CMS.</small>
+                </div>
+                <div class="cms-setting-card">
+                  <span>Google Search Console</span>
+                  <strong>{model.siteSettings.searchConsoleProperty}</strong>
+                  <small>For SEO visibility, query data, indexed pages, and opportunities.</small>
+                </div>
+                <div class="cms-setting-card">
+                  <span>Support access</span>
+                  <strong>{model.siteSettings.supportAccessVisible ? 'Visible to client users' : 'Hidden from client users'}</strong>
+                  <small>Your super admin account is displayed in Users so support access is transparent.</small>
+                </div>
+              </div>
+            </section>
+          </form>
+        )}
+
+        {isUsersMode && (
+          <form class="cms-form">
+            <section class="cms-field-section" aria-labelledby="user-access-heading">
+              <div class="cms-subheading">
+                <p class="cms-kicker">People</p>
+                <h3 id="user-access-heading">User access</h3>
+              </div>
+
+              <div class="cms-user-grid">
+                {model.auth.users.map((user) => (
+                  <article class:list={['cms-user-card', { 'is-support': user.role === 'superAdmin' }]} id={`user-${user.userId}`}>
+                    <div>
+                      <span>{user.accessLabel}</span>
+                      <h4>{user.name}</h4>
+                      <p>{user.email}</p>
+                    </div>
+                    <dl class="cms-user-meta">
+                      <div><dt>Role</dt><dd>{user.roleLabel}</dd></div>
+                      <div><dt>Status</dt><dd>{user.status}</dd></div>
+                      <div><dt>Manage</dt><dd>{user.canBeManagedByCurrentUser ? 'Allowed' : 'Locked'}</dd></div>
+                    </dl>
+                  </article>
+                ))}
+              </div>
+            </section>
+
+            <section class="cms-field-section" aria-labelledby="invite-user-heading">
+              <div class="cms-subheading">
+                <p class="cms-kicker">Invite</p>
+                <h3 id="invite-user-heading">Add user</h3>
+              </div>
+
+              {model.auth.canManageUsers ? (
+                <div class="cms-settings-grid">
+                  <label class="cms-field">
+                    <span>Name</span>
+                    <input class="cms-input" placeholder="New user name" />
+                  </label>
+                  <label class="cms-field">
+                    <span>Email</span>
+                    <input class="cms-input" placeholder="name@example.com" />
+                  </label>
+                  <label class="cms-field">
+                    <span>Role</span>
+                    <select class="cms-input">
+                      {model.auth.inviteRoles.map((role) => (
+                        <option value={role}>{role === 'siteOwner' ? 'Site owner' : role === 'editor' ? 'Editor' : 'Collaborator'}</option>
+                      ))}
+                    </select>
+                  </label>
+                  <button class="cms-button" type="button">Send invite</button>
+                </div>
+              ) : (
+                <div class="cms-empty-state">
+                  <strong>You cannot manage users.</strong>
+                  <p>Only the site owner and Clastro super admin can invite or change users.</p>
+                </div>
+              )}
             </section>
           </form>
         )}
@@ -550,10 +771,14 @@ function isGalleryField(field: CmsFieldView) {
 
       <aside class="cms-rail" aria-label="Publishing state">
         <section class="cms-rail-section">
-          <p class="cms-kicker">Draft state</p>
+          <p class="cms-kicker">{isSettingsMode || isUsersMode ? 'Access state' : 'Draft state'}</p>
           <h2 data-status-text>{statusLabel}</h2>
-          <p data-status-helper>Autosave protects edits. Publish is the moment content becomes live.</p>
-          <button class="cms-button" type="button" data-publish-button disabled>Publish</button>
+          <p data-status-helper>
+            {isSettingsMode || isUsersMode
+              ? 'Logged-in users should only see the tools their role allows.'
+              : 'Autosave protects edits. Publish is the moment content becomes live.'}
+          </p>
+          {!isSettingsMode && !isUsersMode && <button class="cms-button" type="button" data-publish-button disabled>Publish</button>}
         </section>
 
         <section class="cms-rail-section">
@@ -561,6 +786,10 @@ function isGalleryField(field: CmsFieldView) {
           <p>
             {isMediaMode
               ? 'Media metadata and optimized image variants are stored separately. Published pages should reference optimized assets only.'
+              : isSettingsMode
+              ? 'Site settings belong to the site, not an individual page or collection item.'
+              : isUsersMode
+              ? 'Users are global identities with site-specific roles, so support access and client access stay separate.'
               : isPagesMode
               ? 'On-page copy is edited visually from the page itself. This screen only stores page settings and SEO.'
               : 'Editing this item changes the collection source globally. Pages that pull this content should use the updated source on publish.'}
@@ -576,9 +805,39 @@ function isGalleryField(field: CmsFieldView) {
         )}
 
         <section class="cms-rail-section">
-          <p class="cms-kicker">Content contract</p>
+          <p class="cms-kicker">{isSettingsMode || isUsersMode ? 'Account context' : 'Content contract'}</p>
           <dl class="cms-contract-list">
-            {isPagesMode ? (
+            {isSettingsMode ? (
+              <>
+                <div>
+                  <dt>Site</dt>
+                  <dd>{model.siteSettings?.siteId}</dd>
+                </div>
+                <div>
+                  <dt>Domain</dt>
+                  <dd>{model.siteSettings?.domain}</dd>
+                </div>
+                <div>
+                  <dt>Support</dt>
+                  <dd>{model.siteSettings?.supportAccessVisible ? 'Visible' : 'Hidden'}</dd>
+                </div>
+              </>
+            ) : isUsersMode ? (
+              <>
+                <div>
+                  <dt>Signed in</dt>
+                  <dd>{currentUser?.name}</dd>
+                </div>
+                <div>
+                  <dt>Role</dt>
+                  <dd>{currentUser?.roleLabel}</dd>
+                </div>
+                <div>
+                  <dt>Users</dt>
+                  <dd>{model.auth.users.length}</dd>
+                </div>
+              </>
+            ) : isPagesMode ? (
               <>
                 <div>
                   <dt>Page</dt>

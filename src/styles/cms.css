@@ -157,6 +157,29 @@ textarea {
   border-top: 1px solid var(--cms-line);
 }
 
+.cms-user-badge {
+  display: grid;
+  gap: 4px;
+  padding: 12px;
+  border: 1px solid var(--cms-line);
+  border-radius: var(--cms-radius);
+  background: rgba(255, 255, 255, 0.54);
+}
+
+.cms-user-badge .cms-kicker {
+  margin-bottom: 2px;
+}
+
+.cms-user-badge strong,
+.cms-user-badge span {
+  display: block;
+}
+
+.cms-user-badge span {
+  color: var(--cms-muted);
+  font-size: 0.84rem;
+}
+
 .cms-sidebar-note p:last-child {
   margin: 0;
   line-height: 1.45;
@@ -256,6 +279,110 @@ textarea {
 .cms-media-form {
   display: grid;
   gap: 18px;
+}
+
+.cms-settings-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.cms-setting-card,
+.cms-user-card {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+  padding: 14px;
+  border: 1px solid var(--cms-line);
+  border-radius: var(--cms-radius);
+  background: var(--cms-panel-soft);
+}
+
+.cms-setting-card span,
+.cms-user-card span {
+  color: var(--cms-muted);
+  font-size: 0.72rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.cms-setting-card strong,
+.cms-setting-card small,
+.cms-user-card h4,
+.cms-user-card p {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.cms-setting-card strong {
+  font-size: 1rem;
+}
+
+.cms-setting-card small {
+  color: var(--cms-muted);
+  line-height: 1.4;
+}
+
+.cms-user-grid {
+  display: grid;
+  gap: 12px;
+}
+
+.cms-user-card {
+  grid-template-columns: minmax(0, 1fr) minmax(210px, 0.7fr);
+  align-items: start;
+}
+
+.cms-user-card.is-support {
+  border-color: rgba(39, 111, 95, 0.38);
+  background: #f1f8f5;
+}
+
+.cms-user-card h4,
+.cms-user-card p {
+  margin: 0;
+}
+
+.cms-user-card h4 {
+  margin-top: 4px;
+}
+
+.cms-user-card p {
+  margin-top: 5px;
+  color: var(--cms-muted);
+}
+
+.cms-user-meta {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin: 0;
+}
+
+.cms-user-meta div {
+  display: grid;
+  gap: 2px;
+  padding: 8px;
+  border: 1px solid var(--cms-line);
+  border-radius: calc(var(--cms-radius) - 2px);
+  background: var(--cms-panel);
+}
+
+.cms-user-meta dt,
+.cms-user-meta dd {
+  margin: 0;
+}
+
+.cms-user-meta dt {
+  color: var(--cms-muted);
+  font-size: 0.68rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.cms-user-meta dd {
+  font-size: 0.86rem;
+  font-weight: 700;
 }
 
 .cms-upload-panel {
@@ -896,6 +1023,12 @@ textarea {
   }
 
   .cms-fields {
+    grid-template-columns: 1fr;
+  }
+
+  .cms-settings-grid,
+  .cms-user-card,
+  .cms-user-meta {
     grid-template-columns: 1fr;
   }
 

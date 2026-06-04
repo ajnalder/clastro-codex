@@ -1,5 +1,6 @@
 import type { ExtraSectionValue, JsonObject } from '../content-store/types';
 import type { MediaAsset } from '../media/types';
+import type { CmsUserAccount } from './auth';
 
 export interface CmsSampleItem {
   collectionId: string;
@@ -15,6 +16,17 @@ export interface CmsSamplePage {
   label: string;
   status: 'draft' | 'published';
   values: JsonObject;
+}
+
+export interface CmsSiteSettings {
+  siteId: string;
+  siteName: string;
+  businessName: string;
+  domain: string;
+  supportAccessVisible: boolean;
+  analyticsProperty: string;
+  searchConsoleProperty: string;
+  openAiApiKeyStatus: 'notConnected' | 'connected';
 }
 
 export const plasticSurgeonPages: CmsSamplePage[] = [
@@ -342,5 +354,43 @@ export const plumberMediaAssets: MediaAsset[] = [
     },
     createdAt: '2026-06-02T00:00:00.000Z',
     updatedAt: '2026-06-02T00:00:00.000Z',
+  },
+];
+
+export const demoSiteSettings: CmsSiteSettings = {
+  siteId: 'joes-plumbing',
+  siteName: "Joe's Plumbing",
+  businessName: "Joe's Plumbing Ltd",
+  domain: 'joes-plumbing.example',
+  supportAccessVisible: true,
+  analyticsProperty: 'GA4 property connected',
+  searchConsoleProperty: 'Search Console connected',
+  openAiApiKeyStatus: 'notConnected',
+};
+
+export const demoUsers: CmsUserAccount[] = [
+  {
+    userId: 'andrew-nalder',
+    name: 'Andrew Nalder',
+    email: 'andrew@clastro.local',
+    role: 'superAdmin',
+    status: 'active',
+    visibleToClient: true,
+  },
+  {
+    userId: 'joe-owner',
+    name: 'Joe Owner',
+    email: 'joe@joes-plumbing.example',
+    role: 'siteOwner',
+    status: 'active',
+    visibleToClient: true,
+  },
+  {
+    userId: 'emma-editor',
+    name: 'Emma Editor',
+    email: 'emma@joes-plumbing.example',
+    role: 'editor',
+    status: 'invited',
+    visibleToClient: true,
   },
 ];
