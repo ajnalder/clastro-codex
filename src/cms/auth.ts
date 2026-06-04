@@ -8,11 +8,16 @@ export interface CmsUserAccount {
   role: CmsUserRole;
   status: CmsUserStatus;
   visibleToClient: boolean;
+  featureAccess?: {
+    aiBlogGeneration?: boolean;
+  };
 }
 
 export interface CmsUserAccessView extends CmsUserAccount {
   roleLabel: string;
   accessLabel: string;
+  aiBlogGenerationLabel: string;
+  canUseAiBlogGeneration: boolean;
   canBeManagedByCurrentUser: boolean;
 }
 
@@ -21,6 +26,10 @@ export interface CmsSiteAccessView {
   users: CmsUserAccessView[];
   canManageUsers: boolean;
   inviteRoles: CmsUserRole[];
+  features: {
+    canUseAiBlogGeneration: boolean;
+    canManageAiIntegration: boolean;
+  };
 }
 
 const roleLabels: Record<CmsUserRole, string> = {
@@ -70,6 +79,17 @@ function canManageUser(actor: CmsUserAccount | null, target: CmsUserAccount): bo
   return false;
 }
 
+function canUserUseAiBlogGeneration(user: CmsUserAccount): boolean {
+  return user.role === 'superAdmin' || Boolean(user.featureAccess?.aiBlogGeneration);
+}
+
+function createAiBlogGenerationLabel(user: CmsUserAccount): string {
+  if (user.role === 'superAdmin') {
+    return 'Manages';
+  }
+  return canUserUseAiBlogGeneration(user) ? 'Allowed' : 'Hidden';
+}
+
 export function createSiteAccessView(users: CmsUserAccount[], currentUserId: string): CmsSiteAccessView {
   const currentUserAccount = users.find((user) => user.userId === currentUserId) ?? null;
   const visibleUsers = users.filter((user) => user.visibleToClient || user.userId === currentUserId);
@@ -77,6 +97,8 @@ export function createSiteAccessView(users: CmsUserAccount[], currentUserId: str
     ...user,
     roleLabel: getRoleLabel(user.role),
     accessLabel: createAccessLabel(user),
+    aiBlogGenerationLabel: createAiBlogGenerationLabel(user),
+    canUseAiBlogGeneration: canUserUseAiBlogGeneration(user),
     canBeManagedByCurrentUser: canManageUser(currentUserAccount, user),
   }));
   const currentUser = accessUsers.find((user) => user.userId === currentUserId) ?? null;
@@ -88,5 +110,11 @@ export function createSiteAccessView(users: CmsUserAccount[], currentUserId: str
     inviteRoles: currentUserAccount
       ? (['siteOwner', 'editor', 'collaborator'] as CmsUserRole[]).filter((role) => canInviteRole(currentUserAccount.role, role))
       : [],
+    features: {
+      canUseAiBlogGeneration: Boolean(
+        currentUserAccount && canUserUseAiBlogGeneration(currentUserAccount),
+      ),
+      canManageAiIntegration: currentUserAccount?.role === 'superAdmin',
+    },
   };
 }

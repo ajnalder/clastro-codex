@@ -392,9 +392,22 @@ textarea {
 
 .cms-user-meta {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 8px;
   margin: 0;
+}
+
+.cms-check-card {
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: start;
+}
+
+.cms-check-card input {
+  grid-row: span 3;
+  width: 18px;
+  height: 18px;
+  margin: 1px 0 0;
+  accent-color: var(--cms-cyan);
 }
 
 .cms-user-meta div {
@@ -469,6 +482,10 @@ textarea {
   display: grid;
   gap: 7px;
   min-width: 0;
+}
+
+.cms-field-wide {
+  grid-column: 1 / -1;
 }
 
 .cms-field span {
@@ -609,6 +626,8 @@ textarea {
 
 .cms-button {
   display: inline-grid;
+  grid-auto-flow: column;
+  gap: 7px;
   place-items: center;
   width: 100%;
   min-height: 42px;
@@ -656,6 +675,11 @@ textarea {
 .cms-button:disabled {
   cursor: not-allowed;
   opacity: 0.45;
+}
+
+.cms-button svg {
+  width: 16px;
+  height: 16px;
 }
 
 .cms-contract-list {

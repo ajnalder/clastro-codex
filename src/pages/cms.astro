@@ -14,6 +14,8 @@ const selectedPageId = Astro.url.searchParams.get('page') ?? undefined;
 const mode =
   selectedView === 'media'
     ? 'media'
+    : selectedView === 'ai'
+    ? 'ai'
     : selectedView === 'settings'
     ? 'settings'
     : selectedView === 'users'
@@ -64,12 +66,15 @@ const activeItem = model.activeItem;
 const activePage = model.activePage;
 const isPagesMode = model.activeMode === 'pages';
 const isMediaMode = model.activeMode === 'media';
+const isAiMode = model.activeMode === 'ai';
 const isSettingsMode = model.activeMode === 'settings';
 const isUsersMode = model.activeMode === 'users';
 const activeStatus = isPagesMode ? activePage?.status : activeItem?.status;
 const statusLabel =
   isMediaMode
     ? 'Media library'
+    : isAiMode
+    ? 'AI integration'
     : isSettingsMode
     ? 'Site settings'
     : isUsersMode
@@ -145,6 +150,12 @@ function isGalleryField(field: CmsFieldView) {
 
         <nav class="cms-nav" aria-label="Admin">
           <p class="cms-kicker">Admin</p>
+          {model.ai.visible && (
+            <a class:list={['cms-nav-item', { 'is-active': isAiMode }]} href="/cms?view=ai">
+              <span>AI Integration</span>
+              <small>{model.ai.apiKeyStatusLabel}</small>
+            </a>
+          )}
           <a class:list={['cms-nav-item', { 'is-active': isSettingsMode }]} href="/cms?view=settings">
             <span>Settings</span>
             <small>site</small>
@@ -169,7 +180,7 @@ function isGalleryField(field: CmsFieldView) {
         </div>
       </aside>
 
-      <section class="cms-list" aria-label={isMediaMode ? 'Media assets' : isPagesMode ? 'Pages' : isSettingsMode ? 'Settings' : isUsersMode ? 'Users' : 'Collection items'}>
+      <section class="cms-list" aria-label={isMediaMode ? 'Media assets' : isAiMode ? 'AI integration' : isPagesMode ? 'Pages' : isSettingsMode ? 'Settings' : isUsersMode ? 'Users' : 'Collection items'}>
         {isMediaMode ? (
           <>
             <div class="cms-section-heading">
@@ -188,6 +199,31 @@ function isGalleryField(field: CmsFieldView) {
                   <em>{asset.largeBytesLabel}</em>
                 </a>
               ))}
+            </div>
+          </>
+        ) : isAiMode ? (
+          <>
+            <div class="cms-section-heading">
+              <p class="cms-kicker">AI</p>
+              <h1>Integration</h1>
+              <p>OpenAI connection and blog generation access for this site.</p>
+            </div>
+
+            <div class="cms-item-list">
+              <a class="cms-item-row is-active" href="/cms?view=ai">
+                <span>
+                  <strong>OpenAI</strong>
+                  <small>{model.ai.apiKeyStatusLabel}</small>
+                </span>
+                <em>AI</em>
+              </a>
+              <a class="cms-item-row" href="/cms?collection=blogPosts">
+                <span>
+                  <strong>Blog posts</strong>
+                  <small>{model.ai.canGenerateBlogPosts ? 'Generation enabled' : 'Generation hidden'}</small>
+                </span>
+                <em>blog</em>
+              </a>
             </div>
           </>
         ) : isSettingsMode ? (
@@ -278,16 +314,18 @@ function isGalleryField(field: CmsFieldView) {
         )}
       </section>
 
-      <section class="cms-editor" aria-label={isMediaMode ? 'Media editor' : isSettingsMode ? 'Settings editor' : isUsersMode ? 'Users editor' : isPagesMode ? 'Page editor' : 'Item editor'}>
+      <section class="cms-editor" aria-label={isMediaMode ? 'Media editor' : isAiMode ? 'AI integration editor' : isSettingsMode ? 'Settings editor' : isUsersMode ? 'Users editor' : isPagesMode ? 'Page editor' : 'Item editor'}>
         <header class="cms-editor-header">
           <div>
-            <p class="cms-kicker">{isMediaMode ? 'Media library' : isSettingsMode ? 'Site admin' : isUsersMode ? 'Access control' : isPagesMode ? 'Page settings' : 'Editing globally'}</p>
-            <h2>{isMediaMode ? 'Website images' : isSettingsMode ? model.siteSettings?.siteName ?? 'Site settings' : isUsersMode ? 'Users and roles' : isPagesMode ? activePage?.label ?? 'Select a page' : activeItem?.label ?? 'Select an item'}</h2>
+            <p class="cms-kicker">{isMediaMode ? 'Media library' : isAiMode ? 'AI Integration' : isSettingsMode ? 'Site admin' : isUsersMode ? 'Access control' : isPagesMode ? 'Page settings' : 'Editing globally'}</p>
+            <h2>{isMediaMode ? 'Website images' : isAiMode ? 'OpenAI blog assistant' : isSettingsMode ? model.siteSettings?.siteName ?? 'Site settings' : isUsersMode ? 'Users and roles' : isPagesMode ? activePage?.label ?? 'Select a page' : activeItem?.label ?? 'Select an item'}</h2>
             <p>
               {isMediaMode
                 ? 'Upload optimized images, add alt text, and manage captions.'
+                : isAiMode
+                ? 'Connect the client’s own OpenAI API key and decide whether blog generation is available.'
                 : isSettingsMode
-                ? 'Core business, domain, support access, and integration settings.'
+                ? 'Core business, domain, support access, analytics, and search settings.'
                 : isUsersMode
                 ? 'Manage the people who can log in and edit this site.'
                 : isPagesMode
@@ -296,6 +334,12 @@ function isGalleryField(field: CmsFieldView) {
             </p>
           </div>
           <div class="cms-editor-actions">
+            {model.ai.blogGenerationVisible && (
+              <a class="cms-button cms-button-secondary" href="/cms?view=ai">
+                <i data-lucide="sparkles"></i>
+                <span>Generate AI Blog Post</span>
+              </a>
+            )}
             {isPagesMode && activePage && <a class="cms-button cms-button-secondary" href={activePage.editHref}>Edit page</a>}
             <div class="cms-status-pill" data-status-pill>{statusLabel}</div>
           </div>
@@ -352,6 +396,70 @@ function isGalleryField(field: CmsFieldView) {
           </form>
         )}
 
+        {isAiMode && (
+          <form class="cms-form">
+            {model.ai.visible ? (
+              <>
+                <section class="cms-field-section" aria-labelledby="ai-integration-heading">
+                  <div class="cms-subheading">
+                    <p class="cms-kicker">Provider</p>
+                    <h3 id="ai-integration-heading">OpenAI connection</h3>
+                  </div>
+
+                  <div class="cms-settings-grid">
+                    <label class="cms-field">
+                      <span>Provider</span>
+                      <input class="cms-input" value={model.ai.providerLabel} readonly />
+                      <small>Blog generation uses the client’s own OpenAI account and key.</small>
+                    </label>
+                    <label class="cms-field">
+                      <span>API key status</span>
+                      <input class="cms-input" value={model.ai.apiKeyStatusLabel} readonly />
+                      <small>The actual key is never displayed after it is saved.</small>
+                    </label>
+                    <label class="cms-field cms-field-wide">
+                      <span>API key</span>
+                      <input class="cms-input" type="password" placeholder="sk-..." autocomplete="off" disabled={!model.ai.canManageIntegration} />
+                      <small>{model.ai.canManageIntegration ? 'Save or replace the OpenAI API key for this site.' : 'Only Clastro support can add or replace the API key.'}</small>
+                    </label>
+                    <button class="cms-button" type="button" disabled={!model.ai.canManageIntegration}>Save API key</button>
+                  </div>
+                </section>
+
+                <section class="cms-field-section" aria-labelledby="ai-blog-access-heading">
+                  <div class="cms-subheading">
+                    <p class="cms-kicker">Blog generation</p>
+                    <h3 id="ai-blog-access-heading">Visibility and access</h3>
+                  </div>
+
+                  <div class="cms-settings-grid">
+                    <article class="cms-setting-card">
+                      <span>Feature visibility</span>
+                      <strong>{model.ai.blogGenerationEnabled ? 'Enabled for allowed users' : 'Hidden from client users'}</strong>
+                      <small>When hidden, the AI section and Generate AI Blog Post controls do not appear for owners, editors, or collaborators.</small>
+                    </article>
+                    <article class="cms-setting-card">
+                      <span>Current user</span>
+                      <strong>{model.ai.canGenerateBlogPosts ? 'Can generate blog posts' : 'Cannot generate blog posts'}</strong>
+                      <small>Procedure, service, and product pages stay manual; AI assistance is scoped to blog content only.</small>
+                    </article>
+                    <article class="cms-setting-card">
+                      <span>Managed by</span>
+                      <strong>{model.ai.canManageIntegration ? 'Clastro super admin' : 'Clastro support'}</strong>
+                      <small>Andrew can decide which client users see the AI blog workflow when setting up access.</small>
+                    </article>
+                  </div>
+                </section>
+              </>
+            ) : (
+              <div class="cms-empty-state">
+                <strong>AI blog generation is not available for this user.</strong>
+                <p>The integration and blog generation tools are hidden unless Clastro enables access for this login.</p>
+              </div>
+            )}
+          </form>
+        )}
+
         {isSettingsMode && model.siteSettings && (
           <form class="cms-form">
             <section class="cms-field-section" aria-labelledby="site-settings-heading">
@@ -375,11 +483,6 @@ function isGalleryField(field: CmsFieldView) {
                   <span>Primary domain</span>
                   <input class="cms-input" value={model.siteSettings.domain} />
                   <small>The public domain for published pages.</small>
-                </label>
-                <label class="cms-field">
-                  <span>OpenAI API key</span>
-                  <input class="cms-input" value={model.siteSettings.openAiApiKeyStatus === 'connected' ? 'Connected' : 'Not connected'} readonly />
-                  <small>Used later for blog assistance only, using the client’s own key.</small>
                 </label>
               </div>
             </section>
@@ -430,6 +533,7 @@ function isGalleryField(field: CmsFieldView) {
                     <dl class="cms-user-meta">
                       <div><dt>Role</dt><dd>{user.roleLabel}</dd></div>
                       <div><dt>Status</dt><dd>{user.status}</dd></div>
+                      <div><dt>AI blogs</dt><dd>{user.aiBlogGenerationLabel}</dd></div>
                       <div><dt>Manage</dt><dd>{user.canBeManagedByCurrentUser ? 'Allowed' : 'Locked'}</dd></div>
                     </dl>
                   </article>
@@ -461,6 +565,14 @@ function isGalleryField(field: CmsFieldView) {
                       ))}
                     </select>
                   </label>
+                  {model.ai.canManageIntegration && (
+                    <label class="cms-setting-card cms-check-card">
+                      <input type="checkbox" checked />
+                      <span>AI blog generation</span>
+                      <strong>Show AI tools for this user</strong>
+                      <small>Turn this off when a client uses an external SEO writer and should not see blog generation.</small>
+                    </label>
+                  )}
                   <button class="cms-button" type="button">Send invite</button>
                 </div>
               ) : (

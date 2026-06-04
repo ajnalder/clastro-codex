@@ -207,4 +207,46 @@ describe('createCmsViewModel', () => {
 
     expect(model.activeItem?.fields.find((field) => field.id === 'title')?.value).toBe('Draft shut off water title');
   });
+
+  it('shows AI integration and blog generation only for users with AI blog access', () => {
+    const hiddenModel = createCmsViewModel(
+      plumberContract,
+      plumberItems,
+      { selectedCollectionId: 'blogPosts', selectedItemId: 'shutOffWater' },
+      plumberPages,
+      plumberMediaAssets,
+      {
+        siteSettings: demoSiteSettings,
+        users: demoUsers.map((user) =>
+          user.userId === 'joe-owner'
+            ? {
+                ...user,
+                featureAccess: {
+                  aiBlogGeneration: false,
+                },
+              }
+            : user,
+        ),
+        currentUserId: 'joe-owner',
+      },
+    );
+    const allowedModel = createCmsViewModel(
+      plumberContract,
+      plumberItems,
+      { selectedCollectionId: 'blogPosts', selectedItemId: 'shutOffWater' },
+      plumberPages,
+      plumberMediaAssets,
+      {
+        siteSettings: demoSiteSettings,
+        users: demoUsers,
+        currentUserId: 'joe-owner',
+      },
+    );
+
+    expect(hiddenModel.ai.visible).toBe(false);
+    expect(hiddenModel.ai.canGenerateBlogPosts).toBe(false);
+    expect(allowedModel.ai.visible).toBe(true);
+    expect(allowedModel.ai.canGenerateBlogPosts).toBe(true);
+    expect(allowedModel.ai.blogGenerationVisible).toBe(true);
+  });
 });

@@ -26,7 +26,12 @@ export interface CmsSiteSettings {
   supportAccessVisible: boolean;
   analyticsProperty: string;
   searchConsoleProperty: string;
-  openAiApiKeyStatus: 'notConnected' | 'connected';
+  aiIntegration: {
+    provider: 'openai';
+    apiKeyStatus: 'notConnected' | 'connected';
+    blogGenerationEnabled: boolean;
+    hiddenWhenDisabled: boolean;
+  };
 }
 
 export const plasticSurgeonPages: CmsSamplePage[] = [
@@ -365,7 +370,12 @@ export const demoSiteSettings: CmsSiteSettings = {
   supportAccessVisible: true,
   analyticsProperty: 'GA4 property connected',
   searchConsoleProperty: 'Search Console connected',
-  openAiApiKeyStatus: 'notConnected',
+  aiIntegration: {
+    provider: 'openai',
+    apiKeyStatus: 'notConnected',
+    blogGenerationEnabled: true,
+    hiddenWhenDisabled: true,
+  },
 };
 
 export const demoUsers: CmsUserAccount[] = [
@@ -384,6 +394,9 @@ export const demoUsers: CmsUserAccount[] = [
     role: 'siteOwner',
     status: 'active',
     visibleToClient: true,
+    featureAccess: {
+      aiBlogGeneration: true,
+    },
   },
   {
     userId: 'emma-editor',
@@ -392,5 +405,8 @@ export const demoUsers: CmsUserAccount[] = [
     role: 'editor',
     status: 'invited',
     visibleToClient: true,
+    featureAccess: {
+      aiBlogGeneration: true,
+    },
   },
 ];

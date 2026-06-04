@@ -61,4 +61,30 @@ describe('CMS auth and site access', () => {
     expect(getRoleLabel('siteOwner')).toBe('Site owner');
     expect(getRoleLabel('collaborator')).toBe('Collaborator');
   });
+
+  it('hides AI blog generation unless the current user is allowed to use it', () => {
+    const hiddenAccess = createSiteAccessView(users, 'owner');
+    const allowedAccess = createSiteAccessView(
+      users.map((user) =>
+        user.userId === 'owner'
+          ? {
+              ...user,
+              featureAccess: {
+                aiBlogGeneration: true,
+              },
+            }
+          : user,
+      ),
+      'owner',
+    );
+
+    expect(hiddenAccess.features.canUseAiBlogGeneration).toBe(false);
+    expect(allowedAccess.features.canUseAiBlogGeneration).toBe(true);
+    expect(allowedAccess.users.find((user) => user.userId === 'owner')).toEqual(expect.objectContaining({
+      aiBlogGenerationLabel: 'Allowed',
+    }));
+    expect(hiddenAccess.users.find((user) => user.userId === 'owner')).toEqual(expect.objectContaining({
+      aiBlogGenerationLabel: 'Hidden',
+    }));
+  });
 });

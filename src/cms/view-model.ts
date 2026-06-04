@@ -100,9 +100,21 @@ export interface CmsViewModel {
   mediaAssets: CmsMediaAssetView[];
   siteSettings: CmsSiteSettings | null;
   auth: CmsSiteAccessView;
+  ai: CmsAiIntegrationView;
 }
 
-export type CmsMode = 'collections' | 'pages' | 'media' | 'settings' | 'users';
+export interface CmsAiIntegrationView {
+  visible: boolean;
+  providerLabel: string;
+  apiKeyStatus: 'notConnected' | 'connected';
+  apiKeyStatusLabel: string;
+  blogGenerationEnabled: boolean;
+  canGenerateBlogPosts: boolean;
+  blogGenerationVisible: boolean;
+  canManageIntegration: boolean;
+}
+
+export type CmsMode = 'collections' | 'pages' | 'media' | 'settings' | 'users' | 'ai';
 
 interface Selection {
   mode?: CmsMode;
@@ -228,6 +240,29 @@ function createMediaAssetView(asset: MediaAsset): CmsMediaAssetView {
   };
 }
 
+function createAiIntegrationView(
+  siteSettings: CmsSiteSettings | null,
+  auth: CmsSiteAccessView,
+  activeMode: CmsMode,
+  selectedCollectionId?: string,
+): CmsAiIntegrationView {
+  const integration = siteSettings?.aiIntegration;
+  const blogGenerationEnabled = integration?.blogGenerationEnabled ?? false;
+  const canGenerateBlogPosts = blogGenerationEnabled && auth.features.canUseAiBlogGeneration;
+  const visible = auth.features.canManageAiIntegration || canGenerateBlogPosts;
+
+  return {
+    visible,
+    providerLabel: integration?.provider === 'openai' ? 'OpenAI' : 'OpenAI',
+    apiKeyStatus: integration?.apiKeyStatus ?? 'notConnected',
+    apiKeyStatusLabel: integration?.apiKeyStatus === 'connected' ? 'Connected' : 'Not connected',
+    blogGenerationEnabled,
+    canGenerateBlogPosts,
+    blogGenerationVisible: activeMode === 'collections' && selectedCollectionId === 'blogPosts' && canGenerateBlogPosts,
+    canManageIntegration: auth.features.canManageAiIntegration,
+  };
+}
+
 export function createCmsViewModel(
   contract: ContentContract,
   items: CmsSampleItem[],
@@ -240,6 +275,7 @@ export function createCmsViewModel(
   const mediaAssetViews = mediaAssets.map(createMediaAssetView);
   const auth = createSiteAccessView(options.users ?? [], options.currentUserId ?? '');
   const siteSettings = options.siteSettings ?? null;
+  const ai = createAiIntegrationView(siteSettings, auth, activeMode, selection.selectedCollectionId);
 
   const activeCollectionDefinition =
     contract.collections.find((collection) => collection.id === selection.selectedCollectionId) ??
@@ -265,7 +301,7 @@ export function createCmsViewModel(
     active: activeMode === 'pages' && page.id === activePageDefinition?.id,
   }));
 
-  if (activeMode === 'media' || activeMode === 'settings' || activeMode === 'users') {
+  if (activeMode === 'media' || activeMode === 'settings' || activeMode === 'users' || activeMode === 'ai') {
     return {
       activeMode,
       navigation,
@@ -276,6 +312,7 @@ export function createCmsViewModel(
       mediaAssets: mediaAssetViews,
       siteSettings,
       auth,
+      ai,
     };
   }
 
@@ -290,6 +327,7 @@ export function createCmsViewModel(
       mediaAssets: mediaAssetViews,
       siteSettings,
       auth,
+      ai,
     };
   }
 
@@ -320,6 +358,7 @@ export function createCmsViewModel(
       mediaAssets: mediaAssetViews,
       siteSettings,
       auth,
+      ai,
     };
   }
 
@@ -352,5 +391,6 @@ export function createCmsViewModel(
     mediaAssets: mediaAssetViews,
     siteSettings,
     auth,
+    ai,
   };
 }
