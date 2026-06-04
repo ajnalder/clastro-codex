@@ -1,18 +1,23 @@
 :root {
   color-scheme: light;
-  --cms-bg: #f6f8f6;
+  --cms-bg: #f6f8fc;
   --cms-panel: #ffffff;
-  --cms-panel-soft: #f9fbf9;
-  --cms-line: #d7ddd6;
-  --cms-line-strong: #aeb9b0;
-  --cms-text: #242720;
-  --cms-muted: #667168;
-  --cms-soft: #7d887f;
-  --cms-accent: #276f5f;
-  --cms-accent-dark: #1f5a4d;
-  --cms-warning: #755f1d;
-  --cms-radius: 8px;
-  font-family: Geist, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --cms-panel-soft: #f8fafc;
+  --cms-line: #e2e8f0;
+  --cms-line-strong: #cbd5e1;
+  --cms-text: #0b1733;
+  --cms-muted: #5a6783;
+  --cms-soft: #8a99b5;
+  --cms-accent: #00b8d9;
+  --cms-accent-dark: #075f79;
+  --cms-warning: #a16207;
+  --cms-navy: #020024;
+  --cms-navy-soft: #08145a;
+  --cms-cyan: #00b8d9;
+  --cms-cyan-pale: #e9fbff;
+  --cms-cyan-border: #9defff;
+  --cms-radius: 10px;
+  font-family: Outfit, Geist, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
 
 * {
@@ -22,7 +27,9 @@
 body {
   margin: 0;
   min-width: 320px;
-  background: var(--cms-bg);
+  background:
+    radial-gradient(circle at 88% 4%, rgba(0, 184, 217, 0.1), transparent 28%),
+    var(--cms-bg);
   color: var(--cms-text);
 }
 
@@ -46,7 +53,7 @@ textarea {
 
 .cms-shell {
   display: grid;
-  grid-template-columns: 248px minmax(220px, 320px) minmax(0, 1fr) 300px;
+  grid-template-columns: 270px minmax(220px, 320px) minmax(0, 1fr) 300px;
   min-height: 100dvh;
 }
 
@@ -63,28 +70,35 @@ textarea {
   flex-direction: column;
   gap: 28px;
   padding: 18px;
-  background: #e8eee8;
+  border-right: 0;
+  background:
+    radial-gradient(circle at 0 0, rgba(0, 184, 217, 0.22), transparent 38%),
+    linear-gradient(180deg, var(--cms-navy) 0%, var(--cms-navy-soft) 100%);
+  color: #ecfeff;
 }
 
 .cms-brand {
   display: grid;
-  grid-template-columns: 38px 1fr;
   gap: 10px;
-  align-items: center;
   color: inherit;
   text-decoration: none;
 }
 
-.cms-brand-mark {
-  display: grid;
-  width: 38px;
-  height: 38px;
-  place-items: center;
-  border: 1px solid var(--cms-line-strong);
-  border-radius: var(--cms-radius);
-  background: #242720;
-  color: #fbfdf9;
-  font-weight: 700;
+.cms-logo-panel {
+  display: flex;
+  min-height: 62px;
+  align-items: center;
+  padding: 12px;
+  border: 1px solid rgba(157, 239, 255, 0.16);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.06);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+.cms-brand-logo {
+  display: block;
+  width: min(100%, 190px);
+  height: auto;
 }
 
 .cms-brand strong,
@@ -103,6 +117,12 @@ textarea {
 .cms-rail-section p,
 .cms-contract-list dt {
   color: var(--cms-muted);
+}
+
+.cms-sidebar .cms-brand small,
+.cms-sidebar .cms-kicker,
+.cms-sidebar .cms-sidebar-note p {
+  color: rgba(236, 254, 255, 0.62);
 }
 
 .cms-kicker {
@@ -140,10 +160,22 @@ textarea {
   background: rgba(255, 255, 255, 0.48);
 }
 
+.cms-sidebar .cms-nav-item:hover {
+  border-color: rgba(157, 239, 255, 0.18);
+  background: rgba(255, 255, 255, 0.08);
+}
+
 .cms-nav-item.is-active,
 .cms-item-row.is-active {
   border-color: var(--cms-line-strong);
   background: var(--cms-panel);
+}
+
+.cms-sidebar .cms-nav-item.is-active {
+  border-color: var(--cms-cyan-border);
+  background: #ecfeff;
+  color: var(--cms-navy);
+  box-shadow: 0 12px 28px rgba(0, 184, 217, 0.18);
 }
 
 .cms-nav-item small {
@@ -151,19 +183,25 @@ textarea {
   font-variant-numeric: tabular-nums;
 }
 
+.cms-sidebar .cms-nav-item small {
+  color: inherit;
+  opacity: 0.68;
+}
+
 .cms-sidebar-note {
   margin-top: auto;
   padding-top: 18px;
-  border-top: 1px solid var(--cms-line);
+  border-top: 1px solid rgba(157, 239, 255, 0.16);
 }
 
 .cms-user-badge {
   display: grid;
   gap: 4px;
   padding: 12px;
-  border: 1px solid var(--cms-line);
+  border: 1px solid rgba(157, 239, 255, 0.16);
   border-radius: var(--cms-radius);
-  background: rgba(255, 255, 255, 0.54);
+  background: rgba(255, 255, 255, 0.07);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
 }
 
 .cms-user-badge .cms-kicker {
@@ -176,7 +214,7 @@ textarea {
 }
 
 .cms-user-badge span {
-  color: var(--cms-muted);
+  color: rgba(236, 254, 255, 0.7);
   font-size: 0.84rem;
 }
 
@@ -187,7 +225,7 @@ textarea {
 
 .cms-list {
   padding: 22px 16px;
-  background: var(--cms-panel-soft);
+  background: #eef3fa;
 }
 
 .cms-section-heading h1,
@@ -213,7 +251,7 @@ textarea {
 
 .cms-item-row {
   align-items: flex-start;
-  background: #fffefd;
+  background: rgba(255, 255, 255, 0.82);
 }
 
 .cms-item-row strong,
@@ -258,7 +296,7 @@ textarea {
   padding: 6px 10px;
   border: 1px solid var(--cms-line);
   border-radius: 999px;
-  background: var(--cms-panel-soft);
+  background: var(--cms-cyan-pale);
   color: var(--cms-accent-dark);
   font-size: 0.8rem;
   font-weight: 700;
@@ -334,8 +372,8 @@ textarea {
 }
 
 .cms-user-card.is-support {
-  border-color: rgba(39, 111, 95, 0.38);
-  background: #f1f8f5;
+  border-color: rgba(0, 184, 217, 0.36);
+  background: var(--cms-cyan-pale);
 }
 
 .cms-user-card h4,
@@ -454,7 +492,7 @@ textarea {
   padding: 10px 11px;
   border: 1px solid var(--cms-line);
   border-radius: var(--cms-radius);
-  background: #fffefd;
+  background: #ffffff;
   color: var(--cms-text);
   outline: none;
   transition: border-color 160ms ease, box-shadow 160ms ease;
@@ -462,7 +500,7 @@ textarea {
 
 .cms-input:focus {
   border-color: var(--cms-accent);
-  box-shadow: 0 0 0 3px rgba(39, 111, 95, 0.12);
+  box-shadow: 0 0 0 3px rgba(0, 184, 217, 0.16);
 }
 
 .cms-textarea {
@@ -523,7 +561,7 @@ textarea {
   object-fit: cover;
   border: 1px solid var(--cms-line);
   border-radius: var(--cms-radius);
-  background: #eef2ee;
+  background: #eef4fb;
 }
 
 .cms-media-meta {
@@ -556,7 +594,7 @@ textarea {
   align-content: start;
   gap: 0;
   padding: 22px 18px;
-  background: #edf2ed;
+  background: #f8fafc;
   border-right: 0;
 }
 
@@ -575,10 +613,10 @@ textarea {
   width: 100%;
   min-height: 42px;
   margin-top: 16px;
-  border: 1px solid var(--cms-accent-dark);
+  border: 1px solid var(--cms-navy);
   border-radius: var(--cms-radius);
-  background: var(--cms-accent);
-  color: #fbfdf9;
+  background: var(--cms-navy);
+  color: #ecfeff;
   cursor: pointer;
   font-weight: 800;
   text-align: center;
@@ -601,12 +639,14 @@ textarea {
 }
 
 .cms-button:hover:not(:disabled) {
-  background: var(--cms-accent-dark);
+  border-color: var(--cms-cyan);
+  background: var(--cms-cyan);
+  color: var(--cms-navy);
 }
 
 .cms-button-secondary:hover:not(:disabled) {
-  border-color: var(--cms-accent-dark);
-  background: var(--cms-panel-soft);
+  border-color: var(--cms-cyan);
+  background: var(--cms-cyan-pale);
 }
 
 .cms-button:active:not(:disabled) {
@@ -686,9 +726,9 @@ textarea {
   right: 8px;
   width: 32px;
   height: 32px;
-  border-color: rgba(215, 221, 214, 0.82);
+  border-color: rgba(226, 232, 240, 0.82);
   background: rgba(255, 255, 255, 0.9);
-  box-shadow: 0 8px 18px rgba(36, 39, 32, 0.12);
+  box-shadow: 0 8px 18px rgba(11, 23, 51, 0.12);
   backdrop-filter: blur(10px);
 }
 
@@ -727,7 +767,7 @@ textarea {
 .cms-gallery-item:hover,
 .cms-gallery-item:focus-visible {
   border-color: var(--cms-line-strong);
-  box-shadow: 0 10px 22px rgba(36, 39, 32, 0.08);
+  box-shadow: 0 10px 22px rgba(11, 23, 51, 0.08);
 }
 
 .cms-gallery-item:active {
@@ -775,9 +815,9 @@ textarea {
   position: absolute;
   display: flex;
   align-items: center;
-  border: 1px solid rgba(215, 221, 214, 0.82);
+  border: 1px solid rgba(226, 232, 240, 0.82);
   background: rgba(255, 255, 255, 0.88);
-  box-shadow: 0 8px 18px rgba(36, 39, 32, 0.12);
+  box-shadow: 0 8px 18px rgba(11, 23, 51, 0.12);
   backdrop-filter: blur(10px);
 }
 
@@ -817,7 +857,7 @@ textarea {
 .cms-icon-button:hover,
 .cms-icon-button:focus-visible {
   border-color: var(--cms-line-strong);
-  background: #edf4ef;
+  background: var(--cms-cyan-pale);
   outline: none;
 }
 
@@ -871,7 +911,7 @@ textarea {
   border: 1px solid var(--cms-line-strong);
   border-radius: var(--cms-radius);
   background: var(--cms-panel);
-  box-shadow: 0 18px 42px rgba(36, 39, 32, 0.16);
+  box-shadow: 0 18px 42px rgba(11, 23, 51, 0.16);
 }
 
 .cms-media-picker[hidden] {
@@ -929,7 +969,7 @@ textarea {
   object-fit: cover;
   border: 1px solid var(--cms-line);
   border-radius: calc(var(--cms-radius) - 3px);
-  background: #eef2ee;
+  background: #eef4fb;
 }
 
 .cms-picker-option span,
