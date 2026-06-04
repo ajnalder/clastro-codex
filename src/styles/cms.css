@@ -639,6 +639,30 @@ textarea {
   left: 8px;
 }
 
+.cms-blog-seo-fields {
+  gap: 14px;
+  padding-top: 18px;
+  border-top: 1px solid var(--cms-line);
+}
+
+.cms-blog-seo-fields > small {
+  color: var(--cms-muted);
+}
+
+.cms-field.is-at-limit small {
+  color: var(--cms-warning);
+  font-weight: 700;
+}
+
+.cms-field .cms-character-count {
+  display: inline;
+  font-weight: inherit;
+}
+
+.cms-seo-description {
+  min-height: 92px;
+}
+
 .cms-media-form {
   display: grid;
   gap: 18px;

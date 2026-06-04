@@ -135,7 +135,8 @@ export interface CmsBlogWorkspacePostView {
   bodyField: CmsFieldView | null;
   heroImageField: CmsFieldView | null;
   publishDateField: CmsFieldView | null;
-  seoField: CmsFieldView | null;
+  metaTitleField: CmsFieldView | null;
+  metaDescriptionField: CmsFieldView | null;
 }
 
 export interface CmsBlogWorkspaceView {
@@ -353,7 +354,8 @@ function createBlogWorkspaceView(input: {
           bodyField: findField(activeItem.fields, 'body'),
           heroImageField: findField(activeItem.fields, 'heroImage'),
           publishDateField: findField(activeItem.fields, 'publishDate'),
-          seoField: findField(activeItem.fields, 'seo'),
+          metaTitleField: findField(activeItem.fields, 'metaTitle'),
+          metaDescriptionField: findField(activeItem.fields, 'metaDescription'),
         }
       : null,
   };

@@ -285,6 +285,10 @@ describe('createCmsViewModel', () => {
     expect(blogModel.blogWorkspace.activePost?.titleField?.value).toBe('How to Shut Off Water in a Hurry');
     expect(blogModel.blogWorkspace.activePost?.bodyField?.primitive).toBe('richText');
     expect(blogModel.blogWorkspace.activePost?.heroImageField?.mediaAsset?.assetId).toBe('joes-plumbing-van');
+    expect(blogModel.blogWorkspace.activePost?.metaTitleField?.value).toBe('How to Shut Off Water in an Emergency');
+    expect(blogModel.blogWorkspace.activePost?.metaDescriptionField?.value).toBe(
+      'Learn how to shut off water fast, find isolation points, and reduce damage before calling a plumber.',
+    );
     expect(serviceModel.blogWorkspace.visible).toBe(false);
   });
 });

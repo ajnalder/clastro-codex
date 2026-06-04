@@ -43,6 +43,10 @@ describe('CMS visual brand shell', () => {
     expect(cmsPage).toContain('data-richtext-editor={activeBlogPost.bodyField.id}');
     expect(cmsPage).toContain('data-richtext-storage={activeBlogPost.bodyField.id}');
     expect(cmsPage).toContain('data-richtext-image-select={activeBlogPost.bodyField?.id}');
+    expect(cmsPage).toContain('Meta Title');
+    expect(cmsPage).toContain('maxlength="65"');
+    expect(cmsPage).toContain('Meta Description');
+    expect(cmsPage).toContain('maxlength="160"');
   });
 
   it('keeps inline rich text images removable in the editor', async () => {

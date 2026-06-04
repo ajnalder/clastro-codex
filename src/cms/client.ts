@@ -377,6 +377,23 @@ function getItemContext(): { collectionId: string; itemId: string } | null {
   return { collectionId: form.dataset.collectionId, itemId: form.dataset.itemId };
 }
 
+function updateCharacterLimit(field: HTMLInputElement | HTMLTextAreaElement): void {
+  const fieldId = field.dataset.field;
+  const limit = Number(field.dataset.characterLimit);
+  if (!fieldId || !Number.isFinite(limit)) return;
+  const count = field.value.length;
+  const counter = document.querySelector<HTMLElement>(`[data-character-count-for="${CSS.escape(fieldId)}"]`);
+  const shell = field.closest<HTMLElement>('.cms-field');
+  if (counter) {
+    counter.textContent = String(count);
+  }
+  shell?.classList.toggle('is-at-limit', count >= limit);
+}
+
+function initializeCharacterLimits(): void {
+  document.querySelectorAll<HTMLInputElement | HTMLTextAreaElement>('[data-character-limit]').forEach(updateCharacterLimit);
+}
+
 let itemSaveTimer = 0;
 
 function scheduleItemDraftSave(): void {
@@ -905,6 +922,13 @@ document.addEventListener('input', (event) => {
 });
 
 document.addEventListener('input', (event) => {
+  const input = (event.target as HTMLElement | null)?.closest<HTMLInputElement | HTMLTextAreaElement>('[data-character-limit]');
+  if (input) {
+    updateCharacterLimit(input);
+  }
+});
+
+document.addEventListener('input', (event) => {
   const editor = (event.target as HTMLElement | null)?.closest<HTMLElement>('[data-richtext-editor]');
   if (!editor) return;
   syncRichTextAndSave(editor);
@@ -1294,6 +1318,7 @@ function initializeRichTextEditors(): void {
 
 initializeSyncedGalleryImages();
 initializeRichTextEditors();
+initializeCharacterLimits();
 renderIcons();
 
 async function uploadSelectedMedia(): Promise<void> {

@@ -874,12 +874,40 @@ function isGalleryField(field: CmsFieldView) {
                   </div>
                 )}
 
-                {activeBlogPost.seoField && (
-                  <label class="cms-field cms-field-wide cms-blog-seo-field" for={`blog-${activeBlogPost.seoField.id}`}>
+                {(activeBlogPost.metaTitleField || activeBlogPost.metaDescriptionField) && (
+                  <div class="cms-field cms-field-wide cms-blog-seo-field cms-blog-seo-fields">
                     <span>SEO metadata</span>
-                    <textarea class="cms-input cms-textarea" id={`blog-${activeBlogPost.seoField.id}`} data-field={activeBlogPost.seoField.id}>{activeBlogPost.seoField.value}</textarea>
-                    <small>Used for search snippets, social previews, and future SEO opportunity tooling.</small>
-                  </label>
+                    {activeBlogPost.metaTitleField && (
+                      <label class="cms-field" for={`blog-${activeBlogPost.metaTitleField.id}`}>
+                        <span>Meta Title</span>
+                        <input
+                          class="cms-input"
+                          id={`blog-${activeBlogPost.metaTitleField.id}`}
+                          value={activeBlogPost.metaTitleField.value}
+                          maxlength="65"
+                          data-field={activeBlogPost.metaTitleField.id}
+                          data-character-limit="65"
+                          data-character-limit-label="Meta title"
+                        />
+                        <small><span class="cms-character-count" data-character-count-for={activeBlogPost.metaTitleField.id}>{activeBlogPost.metaTitleField.value.length}</span>/65 characters</small>
+                      </label>
+                    )}
+                    {activeBlogPost.metaDescriptionField && (
+                      <label class="cms-field" for={`blog-${activeBlogPost.metaDescriptionField.id}`}>
+                        <span>Meta Description</span>
+                        <textarea
+                          class="cms-input cms-textarea cms-seo-description"
+                          id={`blog-${activeBlogPost.metaDescriptionField.id}`}
+                          maxlength="160"
+                          data-field={activeBlogPost.metaDescriptionField.id}
+                          data-character-limit="160"
+                          data-character-limit-label="Meta description"
+                        >{activeBlogPost.metaDescriptionField.value}</textarea>
+                        <small><span class="cms-character-count" data-character-count-for={activeBlogPost.metaDescriptionField.id}>{activeBlogPost.metaDescriptionField.value.length}</span>/160 characters</small>
+                      </label>
+                    )}
+                    <small>Keep search snippets concise: no more than 65 characters for the title and 160 for the description.</small>
+                  </div>
                 )}
               </div>
             </section>
