@@ -810,27 +810,66 @@ function isGalleryField(field: CmsFieldView) {
                   </div>
                 )}
 
+                {activeBlogPost.bodyField && (
+                  <div class="cms-field cms-field-wide cms-blog-richtext-editor">
+                    <span>Article body</span>
+                    <div class="cms-blog-richtext-shell">
+                      <div class="cms-blog-richtext-toolbar" aria-label="Article formatting">
+                        <button class="cms-icon-button" type="button" title="Heading 2" aria-label="Heading 2" data-richtext-format="h2" data-richtext-field={activeBlogPost.bodyField.id}>
+                          <i data-lucide="heading-2"></i>
+                        </button>
+                        <button class="cms-icon-button" type="button" title="Heading 3" aria-label="Heading 3" data-richtext-format="h3" data-richtext-field={activeBlogPost.bodyField.id}>
+                          <i data-lucide="heading-3"></i>
+                        </button>
+                        <span class="cms-toolbar-divider" aria-hidden="true"></span>
+                        <button class="cms-icon-button" type="button" title="Bold" aria-label="Bold" data-richtext-format="bold" data-richtext-field={activeBlogPost.bodyField.id}>
+                          <i data-lucide="bold"></i>
+                        </button>
+                        <button class="cms-icon-button" type="button" title="Italic" aria-label="Italic" data-richtext-format="italic" data-richtext-field={activeBlogPost.bodyField.id}>
+                          <i data-lucide="italic"></i>
+                        </button>
+                        <button class="cms-icon-button" type="button" title="Bullet list" aria-label="Bullet list" data-richtext-format="bullet" data-richtext-field={activeBlogPost.bodyField.id}>
+                          <i data-lucide="list"></i>
+                        </button>
+                        <button class="cms-icon-button" type="button" title="Numbered list" aria-label="Numbered list" data-richtext-format="numbered" data-richtext-field={activeBlogPost.bodyField.id}>
+                          <i data-lucide="list-ordered"></i>
+                        </button>
+                        <span class="cms-toolbar-divider" aria-hidden="true"></span>
+                        <button class="cms-icon-button" type="button" title="Link" aria-label="Add link" data-richtext-format="link" data-richtext-field={activeBlogPost.bodyField.id}>
+                          <i data-lucide="link"></i>
+                        </button>
+                        <button class="cms-icon-button" type="button" title="Inline image" aria-label="Insert inline image" data-richtext-image-picker-open={activeBlogPost.bodyField.id}>
+                          <i data-lucide="image-plus"></i>
+                        </button>
+                      </div>
+                      <div class="cms-media-picker cms-richtext-picker" data-richtext-picker={activeBlogPost.bodyField.id} hidden>
+                        <label class="cms-picker-search">
+                          <span>Inline image</span>
+                          <input class="cms-input" type="search" placeholder="Search media" data-richtext-picker-search={activeBlogPost.bodyField.id} />
+                        </label>
+                        <div class="cms-picker-list" data-richtext-picker-list={activeBlogPost.bodyField.id}>
+                          {model.mediaAssets.map((asset) => (
+                            <button class="cms-picker-option" type="button" data-richtext-image-select={activeBlogPost.bodyField?.id} data-richtext-image-asset={asset.assetId}>
+                              <img src={asset.previewUrl} alt={asset.altText} width={asset.previewWidth} height={asset.previewHeight} />
+                              <span>
+                                <strong>{asset.filename}</strong>
+                                <small>{asset.altText}</small>
+                              </span>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                      <textarea class="cms-input cms-textarea cms-blog-body-editor" id={`blog-${activeBlogPost.bodyField.id}`} data-field={activeBlogPost.bodyField.id}>{activeBlogPost.bodyField.value}</textarea>
+                    </div>
+                    <small>Use headings, lists, links, and inline images in the article body. Images should come from the optimized Media library.</small>
+                  </div>
+                )}
+
                 {activeBlogPost.seoField && (
-                  <label class="cms-field cms-field-wide" for={`blog-${activeBlogPost.seoField.id}`}>
+                  <label class="cms-field cms-field-wide cms-blog-seo-field" for={`blog-${activeBlogPost.seoField.id}`}>
                     <span>SEO metadata</span>
                     <textarea class="cms-input cms-textarea" id={`blog-${activeBlogPost.seoField.id}`} data-field={activeBlogPost.seoField.id}>{activeBlogPost.seoField.value}</textarea>
                     <small>Used for search snippets, social previews, and future SEO opportunity tooling.</small>
-                  </label>
-                )}
-
-                {activeBlogPost.bodyField && (
-                  <label class="cms-field cms-field-wide" for={`blog-${activeBlogPost.bodyField.id}`}>
-                    <span>Article body</span>
-                    <div class="cms-richtext-toolbar">
-                      <select class="cms-input" data-richtext-media-select={activeBlogPost.bodyField.id} aria-label="Insert image into article body">
-                        <option value="">Insert image from media</option>
-                        {model.mediaAssets.map((asset) => (
-                          <option value={asset.assetId}>{asset.filename}</option>
-                        ))}
-                      </select>
-                      <button class="cms-button cms-button-secondary" type="button" data-richtext-insert-image={activeBlogPost.bodyField.id}>Insert image</button>
-                    </div>
-                    <textarea class="cms-input cms-textarea cms-blog-body-editor" id={`blog-${activeBlogPost.bodyField.id}`} data-field={activeBlogPost.bodyField.id}>{activeBlogPost.bodyField.value}</textarea>
                   </label>
                 )}
               </div>

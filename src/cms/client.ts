@@ -1,4 +1,19 @@
-import { createIcons, GripVertical, Plus, Star, Trash2, Upload } from 'lucide';
+import {
+  Bold,
+  createIcons,
+  GripVertical,
+  Heading2,
+  Heading3,
+  ImagePlus,
+  Italic,
+  Link,
+  List,
+  ListOrdered,
+  Plus,
+  Star,
+  Trash2,
+  Upload,
+} from 'lucide';
 import {
   addGalleryAsset,
   createImageValueFromGalleryHero,
@@ -39,7 +54,21 @@ const mediaCaptionInput = document.querySelector<HTMLInputElement>('[data-media-
 const mediaMetadataTimers = new Map<string, number>();
 const mediaLibrary = new Map<string, CmsClientMediaAsset>();
 const mediaLibraryJson = root?.dataset.mediaLibrary ?? '[]';
-const galleryIcons = { GripVertical, Plus, Star, Trash2, Upload };
+const galleryIcons = {
+  Bold,
+  GripVertical,
+  Heading2,
+  Heading3,
+  ImagePlus,
+  Italic,
+  Link,
+  List,
+  ListOrdered,
+  Plus,
+  Star,
+  Trash2,
+  Upload,
+};
 
 for (const asset of JSON.parse(mediaLibraryJson) as CmsClientMediaAsset[]) {
   mediaLibrary.set(asset.assetId, asset);
@@ -128,8 +157,13 @@ async function uploadMediaFile(file: File, altText: string, caption = ''): Promi
   return asset;
 }
 
-function appendPickerOption(list: HTMLElement, asset: CmsClientMediaAsset, kind: 'media' | 'gallery'): void {
-  const assetAttribute = kind === 'media' ? 'data-media-picker-asset' : 'data-gallery-picker-asset';
+function appendPickerOption(list: HTMLElement, asset: CmsClientMediaAsset, kind: 'media' | 'gallery' | 'richtext'): void {
+  const assetAttribute =
+    kind === 'media'
+      ? 'data-media-picker-asset'
+      : kind === 'gallery'
+        ? 'data-gallery-picker-asset'
+        : 'data-richtext-image-asset';
   if (list.querySelector(`[${assetAttribute}="${CSS.escape(asset.assetId)}"]`)) {
     return;
   }
@@ -140,9 +174,12 @@ function appendPickerOption(list: HTMLElement, asset: CmsClientMediaAsset, kind:
   if (kind === 'media') {
     button.dataset.mediaPickerSelect = list.dataset.mediaPickerList ?? '';
     button.dataset.mediaPickerAsset = asset.assetId;
-  } else {
+  } else if (kind === 'gallery') {
     button.dataset.galleryPickerSelect = list.dataset.galleryPickerList ?? '';
     button.dataset.galleryPickerAsset = asset.assetId;
+  } else {
+    button.dataset.richtextImageSelect = list.dataset.richtextPickerList ?? '';
+    button.dataset.richtextImageAsset = asset.assetId;
   }
 
   const image = document.createElement('img');
@@ -181,6 +218,9 @@ function appendMediaOptions(asset: MediaAsset): void {
   });
   document.querySelectorAll<HTMLElement>('[data-gallery-picker-list]').forEach((list) => {
     appendPickerOption(list, asset, 'gallery');
+  });
+  document.querySelectorAll<HTMLElement>('[data-richtext-picker-list]').forEach((list) => {
+    appendPickerOption(list, asset, 'richtext');
   });
 }
 
@@ -419,7 +459,7 @@ function setImageFieldValue(fieldId: string, assetId: string | null, options: { 
 }
 
 function closeMediaPickers(except?: HTMLElement): void {
-  document.querySelectorAll<HTMLElement>('[data-media-picker], [data-gallery-picker]').forEach((picker) => {
+  document.querySelectorAll<HTMLElement>('[data-media-picker], [data-gallery-picker], [data-richtext-picker]').forEach((picker) => {
     if (picker === except) {
       return;
     }
@@ -438,11 +478,87 @@ function togglePicker(picker: HTMLElement | null): void {
 }
 
 function filterPickerOptions(input: HTMLInputElement): void {
-  const picker = input.closest<HTMLElement>('[data-media-picker], [data-gallery-picker]');
+  const picker = input.closest<HTMLElement>('[data-media-picker], [data-gallery-picker], [data-richtext-picker]');
   const query = input.value.trim().toLowerCase();
   picker?.querySelectorAll<HTMLElement>('.cms-picker-option').forEach((option) => {
     option.hidden = Boolean(query) && !option.textContent?.toLowerCase().includes(query);
   });
+}
+
+function getRichTextTextarea(fieldId: string): HTMLTextAreaElement | null {
+  return document.querySelector<HTMLTextAreaElement>(`textarea[data-field="${CSS.escape(fieldId)}"]`);
+}
+
+function replaceTextareaSelection(textarea: HTMLTextAreaElement, replacement: string): void {
+  const start = textarea.selectionStart ?? textarea.value.length;
+  const end = textarea.selectionEnd ?? start;
+  textarea.value = `${textarea.value.slice(0, start)}${replacement}${textarea.value.slice(end)}`;
+  const cursorPosition = start + replacement.length;
+  textarea.focus();
+  textarea.setSelectionRange(cursorPosition, cursorPosition);
+}
+
+function wrapTextareaSelection(textarea: HTMLTextAreaElement, prefix: string, suffix: string, fallback: string): void {
+  const start = textarea.selectionStart ?? textarea.value.length;
+  const end = textarea.selectionEnd ?? start;
+  const selectedText = textarea.value.slice(start, end) || fallback;
+  textarea.value = `${textarea.value.slice(0, start)}${prefix}${selectedText}${suffix}${textarea.value.slice(end)}`;
+  textarea.focus();
+  textarea.setSelectionRange(start + prefix.length, start + prefix.length + selectedText.length);
+}
+
+function formatSelectedLines(textarea: HTMLTextAreaElement, formatter: (line: string, index: number) => string, fallback: string): void {
+  const start = textarea.selectionStart ?? textarea.value.length;
+  const end = textarea.selectionEnd ?? start;
+  const selectedText = textarea.value.slice(start, end) || fallback;
+  const formatted = selectedText
+    .split('\n')
+    .map((line, index) => formatter(line.replace(/^(#{2,3}|[-*]|\d+\.)\s+/, ''), index))
+    .join('\n');
+  textarea.value = `${textarea.value.slice(0, start)}${formatted}${textarea.value.slice(end)}`;
+  textarea.focus();
+  textarea.setSelectionRange(start, start + formatted.length);
+}
+
+function insertRichTextImage(fieldId: string, assetId: string | null | undefined): void {
+  const textarea = getRichTextTextarea(fieldId);
+  if (!assetId || !textarea) {
+    setStatus('Choose an image', 'Select a media asset before inserting it into rich text.', true);
+    return;
+  }
+  const asset = mediaLibrary.get(assetId);
+  const marker = createRichTextImageMarker(assetId, asset?.caption ?? '');
+  textarea.value = insertRichTextImageMarker(textarea.value, marker, textarea.selectionStart ?? textarea.value.length);
+  textarea.focus();
+  scheduleItemDraftSave();
+  setStatus('Image inserted', 'The article body now references a media library image.', true);
+}
+
+function applyRichTextFormat(fieldId: string, action: string): void {
+  const textarea = getRichTextTextarea(fieldId);
+  if (!textarea) return;
+
+  if (action === 'h2') {
+    formatSelectedLines(textarea, (line) => `## ${line || 'Section heading'}`, 'Section heading');
+  } else if (action === 'h3') {
+    formatSelectedLines(textarea, (line) => `### ${line || 'Subheading'}`, 'Subheading');
+  } else if (action === 'bold') {
+    wrapTextareaSelection(textarea, '**', '**', 'bold text');
+  } else if (action === 'italic') {
+    wrapTextareaSelection(textarea, '*', '*', 'italic text');
+  } else if (action === 'bullet') {
+    formatSelectedLines(textarea, (line) => `- ${line || 'List item'}`, 'List item');
+  } else if (action === 'numbered') {
+    formatSelectedLines(textarea, (line, index) => `${index + 1}. ${line || 'List item'}`, 'List item');
+  } else if (action === 'link') {
+    const selectedText = textarea.value.slice(textarea.selectionStart ?? 0, textarea.selectionEnd ?? 0) || 'link text';
+    const href = window.prompt('Paste the link URL');
+    if (!href) return;
+    replaceTextareaSelection(textarea, `[${selectedText}](${href})`);
+  }
+
+  scheduleItemDraftSave();
+  setStatus('Article updated', 'Formatting has been added to the blog body.', true);
 }
 
 document.addEventListener('click', (event) => {
@@ -450,6 +566,8 @@ document.addEventListener('click', (event) => {
   const openMediaPickerButton = target?.closest<HTMLButtonElement>('[data-media-picker-open]');
   const chooseMediaButton = target?.closest<HTMLButtonElement>('[data-media-picker-select]');
   const removeButton = target?.closest<HTMLButtonElement>('[data-media-field-remove]');
+  const openRichTextPickerButton = target?.closest<HTMLButtonElement>('[data-richtext-image-picker-open]');
+  const chooseRichTextImageButton = target?.closest<HTMLButtonElement>('[data-richtext-image-select]');
 
   if (openMediaPickerButton?.dataset.mediaPickerOpen) {
     togglePicker(document.querySelector<HTMLElement>(`[data-media-picker="${CSS.escape(openMediaPickerButton.dataset.mediaPickerOpen)}"]`));
@@ -464,13 +582,22 @@ document.addEventListener('click', (event) => {
     setImageFieldValue(removeButton.dataset.mediaFieldRemove, null);
     return;
   }
-  if (!target?.closest('[data-media-picker], [data-gallery-picker], [data-media-picker-open], [data-gallery-picker-open]')) {
+  if (openRichTextPickerButton?.dataset.richtextImagePickerOpen) {
+    togglePicker(document.querySelector<HTMLElement>(`[data-richtext-picker="${CSS.escape(openRichTextPickerButton.dataset.richtextImagePickerOpen)}"]`));
+    return;
+  }
+  if (chooseRichTextImageButton?.dataset.richtextImageSelect) {
+    insertRichTextImage(chooseRichTextImageButton.dataset.richtextImageSelect, chooseRichTextImageButton.dataset.richtextImageAsset);
+    closeMediaPickers();
+    return;
+  }
+  if (!target?.closest('[data-media-picker], [data-gallery-picker], [data-richtext-picker], [data-media-picker-open], [data-gallery-picker-open], [data-richtext-image-picker-open]')) {
     closeMediaPickers();
   }
 });
 
 document.addEventListener('input', (event) => {
-  const input = (event.target as HTMLElement | null)?.closest<HTMLInputElement>('[data-media-picker-search], [data-gallery-picker-search]');
+  const input = (event.target as HTMLElement | null)?.closest<HTMLInputElement>('[data-media-picker-search], [data-gallery-picker-search], [data-richtext-picker-search]');
   if (input) {
     filterPickerOptions(input);
   }
@@ -805,21 +932,17 @@ document.addEventListener('dragend', () => {
 });
 
 document.addEventListener('click', (event) => {
+  const button = (event.target as HTMLElement | null)?.closest<HTMLButtonElement>('[data-richtext-format][data-richtext-field]');
+  if (!button?.dataset.richtextFormat || !button.dataset.richtextField) return;
+  applyRichTextFormat(button.dataset.richtextField, button.dataset.richtextFormat);
+});
+
+document.addEventListener('click', (event) => {
   const button = (event.target as HTMLElement | null)?.closest<HTMLButtonElement>('[data-richtext-insert-image]');
   if (!button?.dataset.richtextInsertImage) return;
   const fieldId = button.dataset.richtextInsertImage;
   const select = document.querySelector(`[data-richtext-media-select="${CSS.escape(fieldId)}"]`) as HTMLSelectElement | null;
-  const textarea = document.querySelector<HTMLTextAreaElement>(`textarea[data-field="${CSS.escape(fieldId)}"]`);
-  const assetId = select?.value;
-  if (!assetId || !textarea) {
-    setStatus('Choose an image', 'Select a media asset before inserting it into rich text.', true);
-    return;
-  }
-  const asset = mediaLibrary.get(assetId);
-  const marker = createRichTextImageMarker(assetId, asset?.caption ?? '');
-  textarea.value = insertRichTextImageMarker(textarea.value, marker, textarea.selectionStart ?? textarea.value.length);
-  scheduleItemDraftSave();
-  setStatus('Image inserted', 'The rich text field now references a media library image.', true);
+  insertRichTextImage(fieldId, select?.value);
 });
 
 initializeSyncedGalleryImages();

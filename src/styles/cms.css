@@ -513,10 +513,54 @@ textarea {
   color: var(--cms-muted);
 }
 
+.cms-blog-richtext-shell {
+  position: relative;
+  border: 1px solid var(--cms-line);
+  border-radius: var(--cms-radius);
+  background: var(--cms-panel);
+}
+
+.cms-blog-richtext-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+  padding: 8px;
+  border-bottom: 1px solid var(--cms-line);
+  background: var(--cms-panel-soft);
+}
+
+.cms-blog-richtext-toolbar .cms-icon-button {
+  width: 34px;
+  height: 34px;
+}
+
+.cms-toolbar-divider {
+  width: 1px;
+  height: 24px;
+  background: var(--cms-line);
+}
+
 .cms-blog-body-editor {
   min-height: 420px;
   font-size: 1rem;
   line-height: 1.65;
+}
+
+.cms-blog-richtext-shell .cms-blog-body-editor {
+  min-height: 460px;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.cms-blog-richtext-shell .cms-blog-body-editor:focus {
+  box-shadow: inset 0 0 0 2px rgba(0, 184, 217, 0.16);
+}
+
+.cms-richtext-picker {
+  top: 52px;
+  left: 8px;
 }
 
 .cms-media-form {

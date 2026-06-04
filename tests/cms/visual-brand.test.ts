@@ -26,4 +26,18 @@ describe('CMS visual brand shell', () => {
     expect(cmsPage).toContain('AI Draft Builder');
     expect(cmsPage).toContain('!isBlogWorkspace && activeItem');
   });
+
+  it('keeps the blog editor in writing order with SEO last', () => {
+    const coverIndex = cmsPage.indexOf('cms-blog-cover-field');
+    const bodyIndex = cmsPage.indexOf('cms-blog-richtext-editor');
+    const seoIndex = cmsPage.indexOf('cms-blog-seo-field');
+
+    expect(coverIndex).toBeGreaterThan(-1);
+    expect(bodyIndex).toBeGreaterThan(coverIndex);
+    expect(seoIndex).toBeGreaterThan(bodyIndex);
+    expect(cmsPage).not.toContain('data-richtext-media-select={activeBlogPost.bodyField.id}');
+    expect(cmsPage).toContain('data-richtext-format="h2"');
+    expect(cmsPage).toContain('data-richtext-format="h3"');
+    expect(cmsPage).toContain('data-richtext-image-picker-open={activeBlogPost.bodyField.id}');
+  });
 });
