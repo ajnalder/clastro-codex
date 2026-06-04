@@ -84,6 +84,8 @@ const statusLabel =
     : 'Saved draft';
 const mediaLibraryJson = JSON.stringify(model.mediaAssets);
 const currentUser = model.auth.currentUser;
+const isBlogWorkspace = model.blogWorkspace.visible;
+const activeBlogPost = model.blogWorkspace.activePost;
 
 const multilinePrimitives = new Set(['richText', 'longText', 'seoMetadata', 'table', 'faqList', 'callout']);
 
@@ -180,7 +182,7 @@ function isGalleryField(field: CmsFieldView) {
         </div>
       </aside>
 
-      <section class="cms-list" aria-label={isMediaMode ? 'Media assets' : isAiMode ? 'AI integration' : isPagesMode ? 'Pages' : isSettingsMode ? 'Settings' : isUsersMode ? 'Users' : 'Collection items'}>
+      <section class="cms-list" aria-label={isMediaMode ? 'Media assets' : isAiMode ? 'AI integration' : isPagesMode ? 'Pages' : isSettingsMode ? 'Settings' : isUsersMode ? 'Users' : isBlogWorkspace ? 'Blog posts' : 'Collection items'}>
         {isMediaMode ? (
           <>
             <div class="cms-section-heading">
@@ -291,6 +293,48 @@ function isGalleryField(field: CmsFieldView) {
               ))}
             </div>
           </>
+        ) : isBlogWorkspace ? (
+          <>
+            <div class="cms-section-heading">
+              <p class="cms-kicker">Blog posts</p>
+              <h1>Articles</h1>
+              <p>Draft, review, and publish blog content from a writing-focused workspace.</p>
+            </div>
+
+            <div class="cms-blog-list-tools">
+              <label class="cms-field">
+                <span>Search posts</span>
+                <input class="cms-input" type="search" placeholder="Search by title or excerpt" />
+              </label>
+              <label class="cms-field">
+                <span>Sort</span>
+                <select class="cms-input">
+                  <option>Newest first</option>
+                  <option>Title A-Z</option>
+                  <option>Published first</option>
+                </select>
+              </label>
+            </div>
+
+            <div class="cms-blog-post-list">
+              {model.blogWorkspace.posts.map((post) => (
+                <a class:list={['cms-blog-post-row', { 'is-active': post.active }]} href={`/cms?collection=blogPosts&item=${post.id}`}>
+                  <span class="cms-blog-post-thumb">
+                    {post.mediaAsset ? (
+                      <img src={post.mediaAsset.previewUrl} alt={post.mediaAsset.altText} width={post.mediaAsset.previewWidth} height={post.mediaAsset.previewHeight} />
+                    ) : (
+                      <i data-lucide="file-text"></i>
+                    )}
+                  </span>
+                  <span class="cms-blog-post-row-copy">
+                    <strong>{post.title}</strong>
+                    <small>{post.excerpt || post.publishDate || post.id}</small>
+                  </span>
+                  <em>{post.status}</em>
+                </a>
+              ))}
+            </div>
+          </>
         ) : (
           <>
             <div class="cms-section-heading">
@@ -314,16 +358,18 @@ function isGalleryField(field: CmsFieldView) {
         )}
       </section>
 
-      <section class="cms-editor" aria-label={isMediaMode ? 'Media editor' : isAiMode ? 'AI integration editor' : isSettingsMode ? 'Settings editor' : isUsersMode ? 'Users editor' : isPagesMode ? 'Page editor' : 'Item editor'}>
+      <section class="cms-editor" aria-label={isMediaMode ? 'Media editor' : isAiMode ? 'AI integration editor' : isBlogWorkspace ? 'Blog post editor' : isSettingsMode ? 'Settings editor' : isUsersMode ? 'Users editor' : isPagesMode ? 'Page editor' : 'Item editor'}>
         <header class="cms-editor-header">
           <div>
-            <p class="cms-kicker">{isMediaMode ? 'Media library' : isAiMode ? 'AI Integration' : isSettingsMode ? 'Site admin' : isUsersMode ? 'Access control' : isPagesMode ? 'Page settings' : 'Editing globally'}</p>
-            <h2>{isMediaMode ? 'Website images' : isAiMode ? 'OpenAI blog assistant' : isSettingsMode ? model.siteSettings?.siteName ?? 'Site settings' : isUsersMode ? 'Users and roles' : isPagesMode ? activePage?.label ?? 'Select a page' : activeItem?.label ?? 'Select an item'}</h2>
+            <p class="cms-kicker">{isMediaMode ? 'Media library' : isAiMode ? 'AI Integration' : isBlogWorkspace ? 'Writing workspace' : isSettingsMode ? 'Site admin' : isUsersMode ? 'Access control' : isPagesMode ? 'Page settings' : 'Editing globally'}</p>
+            <h2>{isMediaMode ? 'Website images' : isAiMode ? 'OpenAI blog assistant' : isBlogWorkspace ? activeBlogPost?.title || 'Blog post' : isSettingsMode ? model.siteSettings?.siteName ?? 'Site settings' : isUsersMode ? 'Users and roles' : isPagesMode ? activePage?.label ?? 'Select a page' : activeItem?.label ?? 'Select an item'}</h2>
             <p>
               {isMediaMode
                 ? 'Upload optimized images, add alt text, and manage captions.'
                 : isAiMode
                 ? 'Connect the client’s own OpenAI API key and decide whether blog generation is available.'
+                : isBlogWorkspace
+                ? 'Write the article, manage the cover image, review SEO metadata, and publish when ready.'
                 : isSettingsMode
                 ? 'Core business, domain, support access, analytics, and search settings.'
                 : isUsersMode
@@ -334,7 +380,13 @@ function isGalleryField(field: CmsFieldView) {
             </p>
           </div>
           <div class="cms-editor-actions">
-            {model.ai.blogGenerationVisible && (
+            {isBlogWorkspace && model.blogWorkspace.canUseAiDraftBuilder && (
+              <a class="cms-button cms-button-secondary" href="#ai-draft-builder">
+                <i data-lucide="sparkles"></i>
+                <span>AI Draft</span>
+              </a>
+            )}
+            {model.ai.blogGenerationVisible && !isBlogWorkspace && (
               <a class="cms-button cms-button-secondary" href="/cms?view=ai">
                 <i data-lucide="sparkles"></i>
                 <span>Generate AI Blog Post</span>
@@ -626,7 +678,167 @@ function isGalleryField(field: CmsFieldView) {
           </form>
         )}
 
-        {!isPagesMode && activeItem && (
+        {isBlogWorkspace && activeBlogPost && (
+          <form class="cms-blog-workspace" data-editor-form data-collection-id="blogPosts" data-item-id={activeBlogPost.id}>
+            {model.blogWorkspace.canUseAiDraftBuilder && (
+              <section class="cms-ai-draft-card" id="ai-draft-builder">
+                <div class="cms-subheading">
+                  <p class="cms-kicker">AI Draft Builder</p>
+                  <h3>Start from a brief, then edit the draft.</h3>
+                </div>
+                <div class="cms-blog-grid">
+                  <label class="cms-field cms-field-wide">
+                    <span>Topic or brief</span>
+                    <textarea class="cms-input cms-textarea" placeholder="Example: Write a practical homeowner guide about shutting off water during a plumbing emergency."></textarea>
+                    <small>Use this to create title ideas or a first draft. The generated draft still needs review before publishing.</small>
+                  </label>
+                  <label class="cms-field">
+                    <span>Audience</span>
+                    <input class="cms-input" value="Tauranga homeowners" />
+                  </label>
+                  <label class="cms-field">
+                    <span>Goal</span>
+                    <input class="cms-input" value="Explain clearly and encourage a next step" />
+                  </label>
+                  <label class="cms-field cms-field-wide">
+                    <span>Selected title</span>
+                    <input class="cms-input" placeholder="Optional. Leave blank to let AI suggest one." />
+                  </label>
+                  <label class="cms-check-card cms-setting-card cms-field-wide">
+                    <input type="checkbox" checked />
+                    <span>Cover image</span>
+                    <strong>Generate a cover image and alt text</strong>
+                    <small>Images generated or uploaded here should still be optimized and stored in Media.</small>
+                  </label>
+                </div>
+                <div class="cms-button-row">
+                  <button class="cms-button cms-button-secondary" type="button">Get 5 Titles</button>
+                  <button class="cms-button" type="button">Generate Draft</button>
+                </div>
+              </section>
+            )}
+
+            <section class="cms-blog-editor-card">
+              <div class="cms-blog-editor-bar">
+                <div>
+                  <p class="cms-kicker">{activeBlogPost.id ? 'Editing post' : 'New post'}</p>
+                  <h3>{activeBlogPost.title || 'Untitled blog post'}</h3>
+                </div>
+                <div class="cms-editor-actions">
+                  <label class="cms-publish-toggle">
+                    <input type="checkbox" checked={activeBlogPost.status === 'published'} />
+                    <span>Published</span>
+                  </label>
+                  <button class="cms-button cms-button-secondary" type="button">Save Draft</button>
+                  <button class="cms-button" type="button" disabled>Publish</button>
+                </div>
+              </div>
+
+              <div class="cms-blog-grid">
+                {activeBlogPost.titleField && (
+                  <label class="cms-field cms-field-wide" for={`blog-${activeBlogPost.titleField.id}`}>
+                    <span>Title</span>
+                    <input class="cms-input cms-blog-title-input" id={`blog-${activeBlogPost.titleField.id}`} value={activeBlogPost.titleField.value} data-field={activeBlogPost.titleField.id} />
+                    <small>Shown as the article heading and used as the default slug source.</small>
+                  </label>
+                )}
+                {activeBlogPost.slugField && (
+                  <label class="cms-field" for={`blog-${activeBlogPost.slugField.id}`}>
+                    <span>Slug</span>
+                    <input class="cms-input" id={`blog-${activeBlogPost.slugField.id}`} value={activeBlogPost.slugField.value} data-field={activeBlogPost.slugField.id} />
+                    <small>Used in the post URL.</small>
+                  </label>
+                )}
+                {activeBlogPost.publishDateField && (
+                  <label class="cms-field" for={`blog-${activeBlogPost.publishDateField.id}`}>
+                    <span>Publish date</span>
+                    <input class="cms-input" id={`blog-${activeBlogPost.publishDateField.id}`} value={activeBlogPost.publishDateField.value} data-field={activeBlogPost.publishDateField.id} />
+                  </label>
+                )}
+                {activeBlogPost.excerptField && (
+                  <label class="cms-field cms-field-wide" for={`blog-${activeBlogPost.excerptField.id}`}>
+                    <span>Excerpt</span>
+                    <textarea class="cms-input cms-textarea" id={`blog-${activeBlogPost.excerptField.id}`} data-field={activeBlogPost.excerptField.id}>{activeBlogPost.excerptField.value}</textarea>
+                    <small>Used on blog cards, previews, and sometimes as fallback meta copy.</small>
+                  </label>
+                )}
+
+                {activeBlogPost.heroImageField && (
+                  <div class="cms-field cms-blog-cover-field cms-field-wide" data-cms-field-shell={activeBlogPost.heroImageField.id}>
+                    <span>Cover image</span>
+                    <div class="cms-blog-cover-panel">
+                      <div class="cms-blog-cover-preview" data-image-preview={activeBlogPost.heroImageField.id}>
+                        {activeBlogPost.heroImageField.mediaAsset ? (
+                          <img src={activeBlogPost.heroImageField.mediaAsset.previewUrl} alt={activeBlogPost.heroImageField.mediaAsset.altText} width={activeBlogPost.heroImageField.mediaAsset.previewWidth} height={activeBlogPost.heroImageField.mediaAsset.previewHeight} />
+                        ) : (
+                          <strong>No cover image selected</strong>
+                        )}
+                      </div>
+                      <div class="cms-blog-cover-copy">
+                        <strong>{activeBlogPost.heroImageField.mediaAsset?.filename ?? 'Choose a website image'}</strong>
+                        <small>{activeBlogPost.heroImageField.mediaAsset?.altText ?? 'Upload or choose an optimized image from Media.'}</small>
+                        <input type="hidden" name={`core-${activeBlogPost.heroImageField.id}`} value={JSON.stringify(activeBlogPost.heroImageField.imageValue)} data-field={activeBlogPost.heroImageField.id} data-media-image-field={activeBlogPost.heroImageField.id} />
+                        <div class="cms-media-tools">
+                          <button class="cms-icon-button cms-gallery-tool" type="button" title="Choose cover image" aria-label="Choose cover image" data-media-picker-open={activeBlogPost.heroImageField.id}>
+                            <i data-lucide="plus"></i>
+                          </button>
+                          <label class="cms-icon-button cms-gallery-tool" title="Upload cover image">
+                            <input class="cms-file-input" type="file" accept="image/jpeg,image/png,image/webp" data-media-field-upload={activeBlogPost.heroImageField.id} aria-label="Upload cover image" />
+                            <i data-lucide="upload"></i>
+                            <span class="cms-visually-hidden">Upload cover image</span>
+                          </label>
+                          <div class="cms-media-picker" data-media-picker={activeBlogPost.heroImageField.id} hidden>
+                            <label class="cms-picker-search">
+                              <span>Media library</span>
+                              <input class="cms-input" type="search" placeholder="Search media" data-media-picker-search={activeBlogPost.heroImageField.id} />
+                            </label>
+                            <div class="cms-picker-list" data-media-picker-list={activeBlogPost.heroImageField.id}>
+                              {model.mediaAssets.map((asset) => (
+                                <button class="cms-picker-option" type="button" data-media-picker-select={activeBlogPost.heroImageField?.id} data-media-picker-asset={asset.assetId}>
+                                  <img src={asset.previewUrl} alt={asset.altText} width={asset.previewWidth} height={asset.previewHeight} />
+                                  <span>
+                                    <strong>{asset.filename}</strong>
+                                    <small>{asset.altText}</small>
+                                  </span>
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {activeBlogPost.seoField && (
+                  <label class="cms-field cms-field-wide" for={`blog-${activeBlogPost.seoField.id}`}>
+                    <span>SEO metadata</span>
+                    <textarea class="cms-input cms-textarea" id={`blog-${activeBlogPost.seoField.id}`} data-field={activeBlogPost.seoField.id}>{activeBlogPost.seoField.value}</textarea>
+                    <small>Used for search snippets, social previews, and future SEO opportunity tooling.</small>
+                  </label>
+                )}
+
+                {activeBlogPost.bodyField && (
+                  <label class="cms-field cms-field-wide" for={`blog-${activeBlogPost.bodyField.id}`}>
+                    <span>Article body</span>
+                    <div class="cms-richtext-toolbar">
+                      <select class="cms-input" data-richtext-media-select={activeBlogPost.bodyField.id} aria-label="Insert image into article body">
+                        <option value="">Insert image from media</option>
+                        {model.mediaAssets.map((asset) => (
+                          <option value={asset.assetId}>{asset.filename}</option>
+                        ))}
+                      </select>
+                      <button class="cms-button cms-button-secondary" type="button" data-richtext-insert-image={activeBlogPost.bodyField.id}>Insert image</button>
+                    </div>
+                    <textarea class="cms-input cms-textarea cms-blog-body-editor" id={`blog-${activeBlogPost.bodyField.id}`} data-field={activeBlogPost.bodyField.id}>{activeBlogPost.bodyField.value}</textarea>
+                  </label>
+                )}
+              </div>
+            </section>
+          </form>
+        )}
+
+        {!isPagesMode && !isBlogWorkspace && activeItem && (
           <form class="cms-form" data-editor-form data-collection-id={activeCollection?.id} data-item-id={activeItem.id}>
             <section class="cms-field-section" aria-labelledby="core-fields-heading">
               <div class="cms-subheading">

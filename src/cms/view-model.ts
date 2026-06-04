@@ -101,6 +101,7 @@ export interface CmsViewModel {
   siteSettings: CmsSiteSettings | null;
   auth: CmsSiteAccessView;
   ai: CmsAiIntegrationView;
+  blogWorkspace: CmsBlogWorkspaceView;
 }
 
 export interface CmsAiIntegrationView {
@@ -112,6 +113,36 @@ export interface CmsAiIntegrationView {
   canGenerateBlogPosts: boolean;
   blogGenerationVisible: boolean;
   canManageIntegration: boolean;
+}
+
+export interface CmsBlogWorkspacePostListItem {
+  id: string;
+  title: string;
+  status: CmsSampleItem['status'];
+  active: boolean;
+  excerpt: string;
+  publishDate: string;
+  mediaAsset: CmsMediaAssetView | null;
+}
+
+export interface CmsBlogWorkspacePostView {
+  id: string;
+  title: string;
+  status: CmsSampleItem['status'];
+  titleField: CmsFieldView | null;
+  slugField: CmsFieldView | null;
+  excerptField: CmsFieldView | null;
+  bodyField: CmsFieldView | null;
+  heroImageField: CmsFieldView | null;
+  publishDateField: CmsFieldView | null;
+  seoField: CmsFieldView | null;
+}
+
+export interface CmsBlogWorkspaceView {
+  visible: boolean;
+  canUseAiDraftBuilder: boolean;
+  posts: CmsBlogWorkspacePostListItem[];
+  activePost: CmsBlogWorkspacePostView | null;
 }
 
 export type CmsMode = 'collections' | 'pages' | 'media' | 'settings' | 'users' | 'ai';
@@ -263,6 +294,71 @@ function createAiIntegrationView(
   };
 }
 
+function createEmptyBlogWorkspace(ai: CmsAiIntegrationView): CmsBlogWorkspaceView {
+  return {
+    visible: false,
+    canUseAiDraftBuilder: ai.canGenerateBlogPosts,
+    posts: [],
+    activePost: null,
+  };
+}
+
+function findField(fields: CmsFieldView[], id: string): CmsFieldView | null {
+  return fields.find((field) => field.id === id) ?? null;
+}
+
+function createBlogWorkspaceView(input: {
+  activeCollectionDefinition: ContentContract['collections'][number] | null;
+  activeItem: CmsItemView | null;
+  ai: CmsAiIntegrationView;
+  items: CmsSampleItem[];
+  mediaAssets: CmsMediaAssetView[];
+  selectedItemId?: string;
+}): CmsBlogWorkspaceView {
+  if (input.activeCollectionDefinition?.id !== 'blogPosts') {
+    return createEmptyBlogWorkspace(input.ai);
+  }
+
+  const blogItems = input.items.filter((item) => item.collectionId === 'blogPosts');
+  const activeItem = input.activeItem;
+
+  return {
+    visible: true,
+    canUseAiDraftBuilder: input.ai.canGenerateBlogPosts,
+    posts: blogItems.map((item) => {
+      const fields = createFieldViews(input.activeCollectionDefinition?.coreFields ?? [], item.values, input.mediaAssets);
+      const titleField = findField(fields, 'title');
+      const excerptField = findField(fields, 'excerpt');
+      const publishDateField = findField(fields, 'publishDate');
+      const heroImageField = findField(fields, 'heroImage');
+
+      return {
+        id: item.itemId,
+        title: titleField?.value || item.label,
+        status: item.status,
+        active: item.itemId === input.selectedItemId,
+        excerpt: excerptField?.value ?? '',
+        publishDate: publishDateField?.value ?? '',
+        mediaAsset: heroImageField?.mediaAsset ?? null,
+      };
+    }),
+    activePost: activeItem
+      ? {
+          id: activeItem.id,
+          title: findField(activeItem.fields, 'title')?.value || activeItem.label,
+          status: activeItem.status,
+          titleField: findField(activeItem.fields, 'title'),
+          slugField: findField(activeItem.fields, 'slug'),
+          excerptField: findField(activeItem.fields, 'excerpt'),
+          bodyField: findField(activeItem.fields, 'body'),
+          heroImageField: findField(activeItem.fields, 'heroImage'),
+          publishDateField: findField(activeItem.fields, 'publishDate'),
+          seoField: findField(activeItem.fields, 'seo'),
+        }
+      : null,
+  };
+}
+
 export function createCmsViewModel(
   contract: ContentContract,
   items: CmsSampleItem[],
@@ -276,6 +372,7 @@ export function createCmsViewModel(
   const auth = createSiteAccessView(options.users ?? [], options.currentUserId ?? '');
   const siteSettings = options.siteSettings ?? null;
   const ai = createAiIntegrationView(siteSettings, auth, activeMode, selection.selectedCollectionId);
+  const emptyBlogWorkspace = createEmptyBlogWorkspace(ai);
 
   const activeCollectionDefinition =
     contract.collections.find((collection) => collection.id === selection.selectedCollectionId) ??
@@ -313,6 +410,7 @@ export function createCmsViewModel(
       siteSettings,
       auth,
       ai,
+      blogWorkspace: emptyBlogWorkspace,
     };
   }
 
@@ -328,6 +426,7 @@ export function createCmsViewModel(
       siteSettings,
       auth,
       ai,
+      blogWorkspace: emptyBlogWorkspace,
     };
   }
 
@@ -359,6 +458,14 @@ export function createCmsViewModel(
       siteSettings,
       auth,
       ai,
+      blogWorkspace: createBlogWorkspaceView({
+        activeCollectionDefinition,
+        activeItem: null,
+        ai,
+        items,
+        mediaAssets: mediaAssetViews,
+        selectedItemId: undefined,
+      }),
     };
   }
 
@@ -392,5 +499,13 @@ export function createCmsViewModel(
     siteSettings,
     auth,
     ai,
+    blogWorkspace: createBlogWorkspaceView({
+      activeCollectionDefinition,
+      activeItem,
+      ai,
+      items,
+      mediaAssets: mediaAssetViews,
+      selectedItemId: selectedItem.itemId,
+    }),
   };
 }

@@ -20,4 +20,10 @@ describe('CMS visual brand shell', () => {
     expect(cmsCss).toContain('--cms-navy: #020024');
     expect(cmsCss).toContain('--cms-cyan: #00b8d9');
   });
+
+  it('renders blog posts through the dedicated writing workspace', () => {
+    expect(cmsPage).toContain('cms-blog-workspace');
+    expect(cmsPage).toContain('AI Draft Builder');
+    expect(cmsPage).toContain('!isBlogWorkspace && activeItem');
+  });
 });

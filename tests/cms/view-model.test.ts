@@ -249,4 +249,42 @@ describe('createCmsViewModel', () => {
     expect(allowedModel.ai.canGenerateBlogPosts).toBe(true);
     expect(allowedModel.ai.blogGenerationVisible).toBe(true);
   });
+
+  it('creates a dedicated blog workspace for blog post collections', () => {
+    const blogModel = createCmsViewModel(
+      plumberContract,
+      plumberItems,
+      { selectedCollectionId: 'blogPosts', selectedItemId: 'shutOffWater' },
+      plumberPages,
+      plumberMediaAssets,
+      {
+        siteSettings: demoSiteSettings,
+        users: demoUsers,
+        currentUserId: 'joe-owner',
+      },
+    );
+    const serviceModel = createCmsViewModel(
+      plumberContract,
+      plumberItems,
+      { selectedCollectionId: 'services', selectedItemId: 'emergency' },
+      plumberPages,
+      plumberMediaAssets,
+      {
+        siteSettings: demoSiteSettings,
+        users: demoUsers,
+        currentUserId: 'joe-owner',
+      },
+    );
+
+    expect(blogModel.blogWorkspace.visible).toBe(true);
+    expect(blogModel.blogWorkspace.canUseAiDraftBuilder).toBe(true);
+    expect(blogModel.blogWorkspace.posts.map((post) => post.title)).toEqual([
+      'How to Shut Off Water in a Hurry',
+      'Five Signs Your Hot Water Cylinder Needs Attention',
+    ]);
+    expect(blogModel.blogWorkspace.activePost?.titleField?.value).toBe('How to Shut Off Water in a Hurry');
+    expect(blogModel.blogWorkspace.activePost?.bodyField?.primitive).toBe('richText');
+    expect(blogModel.blogWorkspace.activePost?.heroImageField?.mediaAsset?.assetId).toBe('joes-plumbing-van');
+    expect(serviceModel.blogWorkspace.visible).toBe(false);
+  });
 });
