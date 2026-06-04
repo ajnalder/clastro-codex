@@ -54,6 +54,7 @@ const mediaCaptionInput = document.querySelector<HTMLInputElement>('[data-media-
 const mediaMetadataTimers = new Map<string, number>();
 const mediaLibrary = new Map<string, CmsClientMediaAsset>();
 const richTextSelections = new Map<string, Range>();
+let suppressRichTextSelectionMemory = false;
 const mediaLibraryJson = root?.dataset.mediaLibrary ?? '[]';
 const galleryIcons = {
   Bold,
@@ -524,11 +525,37 @@ function createRichTextImageHtml(assetId: string, caption = ''): string {
 
   return [
     `<figure class="cms-richtext-image" contenteditable="false" data-richtext-media="${escapeHtml(assetId)}">`,
+    '<button class="cms-icon-button cms-richtext-image-remove" type="button" title="Remove image" aria-label="Remove inline image" data-richtext-remove-image>',
+    '<i data-lucide="trash-2"></i>',
+    '</button>',
     image,
     `<figcaption>${escapeHtml(label)}</figcaption>`,
     '</figure>',
     '<p><br></p>',
   ].join('');
+}
+
+function createRichTextRemoveButton(): HTMLButtonElement {
+  const button = document.createElement('button');
+  button.className = 'cms-icon-button cms-richtext-image-remove';
+  button.type = 'button';
+  button.title = 'Remove image';
+  button.setAttribute('aria-label', 'Remove inline image');
+  button.dataset.richtextRemoveImage = '';
+  const icon = document.createElement('i');
+  icon.dataset.lucide = 'trash-2';
+  button.appendChild(icon);
+  return button;
+}
+
+function ensureRichTextImageControls(editor: HTMLElement): void {
+  editor.querySelectorAll<HTMLElement>('.cms-richtext-image, [data-richtext-media]').forEach((figure) => {
+    figure.setAttribute('contenteditable', 'false');
+    if (!figure.querySelector('[data-richtext-remove-image]')) {
+      figure.insertBefore(createRichTextRemoveButton(), figure.firstChild);
+    }
+  });
+  renderIcons(editor);
 }
 
 function renderInlineRichText(value: string): string {
@@ -583,7 +610,11 @@ function syncRichTextStorage(editor: HTMLElement): void {
   if (!fieldId) return;
   const storage = getRichTextStorage(fieldId);
   if (!storage) return;
-  storage.value = editor.innerHTML.trim();
+  const cleanEditor = editor.cloneNode(true) as HTMLElement;
+  cleanEditor.querySelectorAll('[data-richtext-remove-image]').forEach((element) => element.remove());
+  cleanEditor.querySelectorAll('[data-richtext-caret]').forEach((element) => element.remove());
+  cleanEditor.querySelectorAll<HTMLElement>('[contenteditable]').forEach((element) => element.removeAttribute('contenteditable'));
+  storage.value = cleanEditor.innerHTML.trim();
 }
 
 function syncRichTextAndSave(editor: HTMLElement): void {
@@ -607,6 +638,7 @@ function getEditorForSelection(): HTMLElement | null {
 }
 
 function rememberRichTextSelection(): void {
+  if (suppressRichTextSelectionMemory) return;
   const editor = getEditorForSelection();
   const fieldId = editor?.dataset.richtextEditor;
   const selection = window.getSelection();
@@ -694,10 +726,66 @@ function placeCursorAtEditorEnd(editor: HTMLElement): void {
 }
 
 function focusRichTextEditor(editor: HTMLElement): void {
-  editor.focus();
-  if (!selectionIsInside(editor) && !restoreRichTextSelection(editor)) {
-    placeCursorAtEditorEnd(editor);
+  suppressRichTextSelectionMemory = true;
+  try {
+    editor.focus();
+    if (!restoreRichTextSelection(editor) && !selectionIsInside(editor)) {
+      placeCursorAtEditorEnd(editor);
+    }
+  } finally {
+    suppressRichTextSelectionMemory = false;
   }
+}
+
+function removeRichTextCaretMarkers(fieldId?: string): void {
+  const selector = fieldId ? `[data-richtext-caret="${CSS.escape(fieldId)}"]` : '[data-richtext-caret]';
+  document.querySelectorAll(selector).forEach((marker) => marker.remove());
+}
+
+function createHtmlFragment(html: string): DocumentFragment {
+  const template = document.createElement('template');
+  template.innerHTML = html;
+  return template.content;
+}
+
+function placeRichTextCaretMarker(fieldId: string): void {
+  const editor = getRichTextEditor(fieldId);
+  if (!editor) return;
+  const range = getActiveRichTextRange(editor);
+  removeRichTextCaretMarkers(fieldId);
+
+  const marker = document.createElement('span');
+  marker.className = 'cms-richtext-caret-marker';
+  marker.dataset.richtextCaret = fieldId;
+  marker.setAttribute('contenteditable', 'false');
+
+  if (range) {
+    range.collapse(false);
+    range.insertNode(marker);
+  } else {
+    editor.appendChild(marker);
+  }
+}
+
+function insertHtmlAtRichTextCaret(editor: HTMLElement, fieldId: string, html: string): boolean {
+  const marker = editor.querySelector<HTMLElement>(`[data-richtext-caret="${CSS.escape(fieldId)}"]`);
+  if (!marker) return false;
+  const fragment = createHtmlFragment(html);
+  const markerBlock = marker.closest<HTMLElement>('p, h2, h3, li');
+  if (markerBlock && editor.contains(markerBlock)) {
+    const blockText = markerBlock.textContent?.replace(/\u200b/g, '').trim() ?? '';
+    if (blockText) {
+      markerBlock.parentNode?.insertBefore(fragment, markerBlock.nextSibling);
+    } else {
+      markerBlock.parentNode?.insertBefore(fragment, markerBlock);
+      markerBlock.remove();
+      return true;
+    }
+  } else {
+    marker.parentNode?.insertBefore(fragment, marker);
+  }
+  marker.remove();
+  return true;
 }
 
 function insertRichTextImage(fieldId: string, assetId: string | null | undefined): void {
@@ -708,8 +796,12 @@ function insertRichTextImage(fieldId: string, assetId: string | null | undefined
 
   const editor = getRichTextEditor(fieldId);
   if (editor) {
-    focusRichTextEditor(editor);
-    document.execCommand('insertHTML', false, createRichTextImageHtml(assetId, mediaLibrary.get(assetId)?.caption ?? ''));
+    const imageHtml = createRichTextImageHtml(assetId, mediaLibrary.get(assetId)?.caption ?? '');
+    if (!insertHtmlAtRichTextCaret(editor, fieldId, imageHtml)) {
+      focusRichTextEditor(editor);
+      document.execCommand('insertHTML', false, imageHtml);
+    }
+    ensureRichTextImageControls(editor);
     syncRichTextAndSave(editor);
     setStatus('Image inserted', 'The article body now shows the selected media image.', true);
     return;
@@ -794,6 +886,17 @@ document.addEventListener('click', (event) => {
   }
 });
 
+document.addEventListener('click', (event) => {
+  const removeButton = (event.target as HTMLElement | null)?.closest<HTMLButtonElement>('[data-richtext-remove-image]');
+  if (!removeButton) return;
+  const figure = removeButton.closest<HTMLElement>('[data-richtext-media]');
+  const editor = figure?.closest<HTMLElement>('[data-richtext-editor]');
+  if (!figure || !editor) return;
+  figure.remove();
+  syncRichTextAndSave(editor);
+  setStatus('Image removed', 'The inline image has been removed from the article body.', true);
+});
+
 document.addEventListener('input', (event) => {
   const input = (event.target as HTMLElement | null)?.closest<HTMLInputElement>('[data-media-picker-search], [data-gallery-picker-search], [data-richtext-picker-search]');
   if (input) {
@@ -811,12 +914,29 @@ document.addEventListener('mousedown', (event) => {
   const button = (event.target as HTMLElement | null)?.closest<HTMLButtonElement>('[data-richtext-format], [data-richtext-image-picker-open]');
   if (button) {
     rememberRichTextSelection();
+    if (button.dataset.richtextImagePickerOpen) {
+      placeRichTextCaretMarker(button.dataset.richtextImagePickerOpen);
+    }
     event.preventDefault();
   }
 });
 
 document.addEventListener('selectionchange', () => {
   rememberRichTextSelection();
+});
+
+document.addEventListener('keyup', (event) => {
+  const editor = (event.target as HTMLElement | null)?.closest<HTMLElement>('[data-richtext-editor]');
+  if (editor) {
+    rememberRichTextSelection();
+  }
+});
+
+document.addEventListener('mouseup', (event) => {
+  const editor = (event.target as HTMLElement | null)?.closest<HTMLElement>('[data-richtext-editor]');
+  if (editor) {
+    rememberRichTextSelection();
+  }
 });
 
 function updateImageUploadHelper(fieldId: string, text: string): void {
@@ -1167,6 +1287,7 @@ function initializeRichTextEditors(): void {
     if (!fieldId) return;
     const storage = getRichTextStorage(fieldId);
     editor.innerHTML = renderStoredRichText(storage?.value ?? '');
+    ensureRichTextImageControls(editor);
     syncRichTextStorage(editor);
   });
 }

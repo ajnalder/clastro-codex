@@ -594,6 +594,7 @@ textarea {
 }
 
 .cms-richtext-image {
+  position: relative;
   display: grid;
   max-width: 520px;
   gap: 8px;
@@ -601,6 +602,15 @@ textarea {
   border: 1px solid var(--cms-line);
   border-radius: var(--cms-radius);
   background: var(--cms-panel-soft);
+}
+
+.cms-richtext-image-remove {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  z-index: 1;
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: 0 10px 24px rgba(11, 23, 51, 0.16);
 }
 
 .cms-richtext-image img {
@@ -617,6 +627,10 @@ textarea {
 }
 
 .cms-blog-body-storage {
+  display: none;
+}
+
+.cms-richtext-caret-marker {
   display: none;
 }
 

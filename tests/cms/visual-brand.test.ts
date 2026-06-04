@@ -42,5 +42,14 @@ describe('CMS visual brand shell', () => {
     expect(cmsPage).toContain('contenteditable="true"');
     expect(cmsPage).toContain('data-richtext-editor={activeBlogPost.bodyField.id}');
     expect(cmsPage).toContain('data-richtext-storage={activeBlogPost.bodyField.id}');
+    expect(cmsPage).toContain('data-richtext-image-select={activeBlogPost.bodyField?.id}');
+  });
+
+  it('keeps inline rich text images removable in the editor', async () => {
+    const cmsClient = await readFixture('../../src/cms/client.ts');
+
+    expect(cmsClient).toContain('data-richtext-remove-image');
+    expect(cmsClient).toContain('figure.remove()');
+    expect(cmsClient).toContain("setStatus('Image removed'");
   });
 });
